@@ -39,11 +39,22 @@ func main() {
 	}
 	log.Println("✓ MinIO connected successfully")
 
+	// Log startup configuration
+	log.Println("========================================")
+	log.Printf("Environment: %s", cfg.Env)
+	log.Printf("Database: %s:%s/%s", cfg.Database.Host, cfg.Database.Port, cfg.Database.DBName)
+	log.Printf("MinIO: %s (Public URL: %s)", cfg.MinIO.Endpoint, cfg.MinIO.PublicURL)
+	log.Printf("CORS Allowed Origins: %v", cfg.Server.AllowedOrigins)
+	log.Println("========================================")
+
 	// Create Echo instance
 	e := echo.New()
 
-	// Middleware
-	e.Use(echoMiddleware.Logger())
+	// Middleware - Custom Logger with detailed format
+	e.Use(echoMiddleware.LoggerWithConfig(echoMiddleware.LoggerConfig{
+		Format:           "${time_rfc3339} | ${status} | ${method} ${uri} | ${latency_human} | ${remote_ip} | ${error}\n",
+		CustomTimeFormat: "2006-01-02 15:04:05",
+	}))
 	e.Use(echoMiddleware.Recover())
 	e.Use(middleware.SetupCORS(cfg.Server.AllowedOrigins))
 
@@ -60,6 +71,15 @@ func main() {
 			"time":   time.Now().Format(time.RFC3339),
 		})
 	})
+
+	// Log all registered routes
+	log.Println("========================================")
+	log.Println("Registered Routes:")
+	log.Println("========================================")
+	for _, route := range e.Routes() {
+		log.Printf("%-6s %s", route.Method, route.Path)
+	}
+	log.Println("========================================")
 
 	// Start server
 	serverAddr := fmt.Sprintf(":%s", cfg.Server.Port)

@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"log"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -19,6 +21,16 @@ func SuccessResponse(c echo.Context, statusCode int, data interface{}) error {
 }
 
 func ErrorResponseJSON(c echo.Context, statusCode int, code, message string, details interface{}) error {
+	// Log error for debugging
+	log.Printf("[ERROR] %s %s | Status: %d | Code: %s | Message: %s | Details: %v",
+		c.Request().Method,
+		c.Request().URL.Path,
+		statusCode,
+		code,
+		message,
+		details,
+	)
+
 	return c.JSON(statusCode, ErrorResponse{
 		Error: ErrorDetail{
 			Code:    code,

@@ -85,31 +85,37 @@ func (r *UserRepository) GetStats(userID string) (map[string]int, error) {
 	stats := make(map[string]int)
 
 	// Count food shared
+	var foodShared int
 	err := r.db.QueryRow(`
 		SELECT COUNT(*) FROM food_posts WHERE user_id = $1
-	`, userID).Scan(&stats["foodShared"])
+	`, userID).Scan(&foodShared)
 	if err != nil {
 		return nil, err
 	}
+	stats["foodShared"] = foodShared
 
 	// Count people helped (accepted requests)
+	var peopleHelped int
 	err = r.db.QueryRow(`
 		SELECT COUNT(*) FROM food_requests fr
 		JOIN food_posts fp ON fr.food_post_id = fp.id
 		WHERE fp.user_id = $1 AND fr.status = 'accepted'
-	`, userID).Scan(&stats["peopleHelped"])
+	`, userID).Scan(&peopleHelped)
 	if err != nil {
 		return nil, err
 	}
+	stats["peopleHelped"] = peopleHelped
 
 	// Count active posts
+	var activePosts int
 	err = r.db.QueryRow(`
 		SELECT COUNT(*) FROM food_posts
 		WHERE user_id = $1 AND status = 'available'
-	`, userID).Scan(&stats["activePosts"])
+	`, userID).Scan(&activePosts)
 	if err != nil {
 		return nil, err
 	}
+	stats["activePosts"] = activePosts
 
 	return stats, nil
 }

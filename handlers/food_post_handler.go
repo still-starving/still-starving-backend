@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"mime/multipart"
 	"net/http"
 	"strconv"
 
@@ -44,13 +45,19 @@ func (h *FoodPostHandler) CreateFoodPost(c echo.Context) error {
 		return utils.BadRequest(c, "Validation failed", utils.FormatValidationErrors(err))
 	}
 
-	// Get image file if provided
-	file, err := c.FormFile("image")
-	if err != nil && err != http.ErrMissingFile {
-		return utils.BadRequest(c, "Invalid image file", nil)
+	// Get multiple image files if provided
+	var imageFiles []*multipart.FileHeader
+	form, err := c.MultipartForm()
+	if err == nil && form != nil && form.File != nil {
+		// Try both "images" (new) and "image" (legacy) field names
+		if files, ok := form.File["images"]; ok {
+			imageFiles = files
+		} else if files, ok := form.File["image"]; ok {
+			imageFiles = files
+		}
 	}
 
-	post, err := h.foodPostService.CreatePost(userID, &req, file)
+	post, err := h.foodPostService.CreatePost(userID, &req, imageFiles)
 	if err != nil {
 		return utils.InternalServerError(c, err.Error())
 	}

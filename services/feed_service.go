@@ -31,11 +31,6 @@ func (s *FeedService) GetFeed(feedType, userID string) ([]interface{}, error) {
 		}
 
 		for _, post := range foodPosts {
-			var imageURL *string
-			if post.ImageURL != "" {
-				imageURL = &post.ImageURL
-			}
-
 			feedItem := models.FoodFeedItem{
 				Type:        "food",
 				ID:          post.ID,
@@ -46,7 +41,7 @@ func (s *FeedService) GetFeed(feedType, userID string) ([]interface{}, error) {
 				ExpiryDate:  post.ExpiryDate,
 				Status:      post.Status,
 				OwnerName:   post.UserName,
-				ImageURL:    imageURL,
+				ImageURLs:   post.ImageURLs,
 				IsOwner:     post.UserID == userID,
 			}
 			feed = append(feed, feedItem)

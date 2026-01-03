@@ -17,6 +17,7 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, minioClient *minio.Client, cfg *confi
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
 	foodPostRepo := repository.NewFoodPostRepository(db)
+	postImageRepo := repository.NewPostImageRepository(db)
 	hungerBroadcastRepo := repository.NewHungerBroadcastRepository(db)
 	foodRequestRepo := repository.NewFoodRequestRepository(db)
 	hungerOfferRepo := repository.NewHungerOfferRepository(db)
@@ -25,7 +26,7 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, minioClient *minio.Client, cfg *confi
 	jwtExpiration, _ := time.ParseDuration(cfg.JWT.Expiration)
 	authService := services.NewAuthService(userRepo, cfg.JWT.Secret, jwtExpiration)
 	imageService := services.NewImageService(minioClient, &cfg.MinIO, cfg.Upload.MaxSize)
-	foodPostService := services.NewFoodPostService(foodPostRepo, imageService)
+	foodPostService := services.NewFoodPostService(foodPostRepo, postImageRepo, imageService)
 	hungerBroadcastService := services.NewHungerBroadcastService(hungerBroadcastRepo)
 	feedService := services.NewFeedService(foodPostRepo, hungerBroadcastRepo)
 

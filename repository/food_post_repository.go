@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/yourusername/food-sharing-backend/models"
 )
 
@@ -21,15 +22,15 @@ func (r *FoodPostRepository) Create(post *models.FoodPost) error {
 	post.Status = "available"
 
 	query := `
-		INSERT INTO food_posts (id, user_id, title, description, quantity, location, expiry_date, image_url)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO food_posts (id, user_id, title, description, quantity, location, expiry_date)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING created_at, updated_at
 	`
 
 	return r.db.QueryRow(
 		query,
 		post.ID, post.UserID, post.Title, post.Description,
-		post.Quantity, post.Location, post.ExpiryDate, post.ImageURL,
+		post.Quantity, post.Location, post.ExpiryDate,
 	).Scan(&post.CreatedAt, &post.UpdatedAt)
 }
 
@@ -38,10 +39,12 @@ func (r *FoodPostRepository) FindAll(status string, limit, offset int) ([]models
 
 	query := `
 		SELECT fp.id, fp.user_id, fp.title, fp.description, fp.quantity, fp.location,
-		       fp.expiry_date, fp.image_url, fp.status, fp.created_at, fp.updated_at,
-		       u.name as user_name
+		       fp.expiry_date, fp.status, fp.created_at, fp.updated_at,
+		       u.name as user_name,
+		       COALESCE(array_agg(pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL), '{}') as image_urls
 		FROM food_posts fp
 		JOIN users u ON fp.user_id = u.id
+		LEFT JOIN post_images pi ON fp.id = pi.food_post_id
 	`
 
 	args := []interface{}{}
@@ -53,6 +56,7 @@ func (r *FoodPostRepository) FindAll(status string, limit, offset int) ([]models
 		argCount++
 	}
 
+	query += " GROUP BY fp.id, u.name"
 	query += " ORDER BY fp.created_at DESC"
 
 	if limit > 0 {
@@ -74,14 +78,17 @@ func (r *FoodPostRepository) FindAll(status string, limit, offset int) ([]models
 
 	for rows.Next() {
 		var post models.FoodPost
+		var imageURLs pq.StringArray
 		err := rows.Scan(
 			&post.ID, &post.UserID, &post.Title, &post.Description,
-			&post.Quantity, &post.Location, &post.ExpiryDate, &post.ImageURL,
+			&post.Quantity, &post.Location, &post.ExpiryDate,
 			&post.Status, &post.CreatedAt, &post.UpdatedAt, &post.UserName,
+			&imageURLs,
 		)
 		if err != nil {
 			return nil, err
 		}
+		post.ImageURLs = []string(imageURLs)
 		posts = append(posts, post)
 	}
 
@@ -93,24 +100,33 @@ func (r *FoodPostRepository) FindByID(id string) (*models.FoodPost, error) {
 
 	query := `
 		SELECT fp.id, fp.user_id, fp.title, fp.description, fp.quantity, fp.location,
-		       fp.expiry_date, fp.image_url, fp.status, fp.created_at, fp.updated_at,
-		       u.name as user_name
+		       fp.expiry_date, fp.status, fp.created_at, fp.updated_at,
+		       u.name as user_name,
+		       COALESCE(array_agg(pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL), '{}') as image_urls
 		FROM food_posts fp
 		JOIN users u ON fp.user_id = u.id
+		LEFT JOIN post_images pi ON fp.id = pi.food_post_id
 		WHERE fp.id = $1
+		GROUP BY fp.id, u.name
 	`
 
+	var imageURLs pq.StringArray
 	err := r.db.QueryRow(query, id).Scan(
 		&post.ID, &post.UserID, &post.Title, &post.Description,
-		&post.Quantity, &post.Location, &post.ExpiryDate, &post.ImageURL,
+		&post.Quantity, &post.Location, &post.ExpiryDate,
 		&post.Status, &post.CreatedAt, &post.UpdatedAt, &post.UserName,
+		&imageURLs,
 	)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
+	if err != nil {
+		return nil, err
+	}
 
-	return post, err
+	post.ImageURLs = []string(imageURLs)
+	return post, nil
 }
 
 func (r *FoodPostRepository) Update(post *models.FoodPost) error {
@@ -139,11 +155,14 @@ func (r *FoodPostRepository) FindByUserID(userID string) ([]models.FoodPost, err
 	var posts []models.FoodPost
 
 	query := `
-		SELECT id, user_id, title, description, quantity, location,
-		       expiry_date, image_url, status, created_at, updated_at
-		FROM food_posts
-		WHERE user_id = $1
-		ORDER BY created_at DESC
+		SELECT fp.id, fp.user_id, fp.title, fp.description, fp.quantity, fp.location,
+		       fp.expiry_date, fp.status, fp.created_at, fp.updated_at,
+		       COALESCE(array_agg(pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL), '{}') as image_urls
+		FROM food_posts fp
+		LEFT JOIN post_images pi ON fp.id = pi.food_post_id
+		WHERE fp.user_id = $1
+		GROUP BY fp.id
+		ORDER BY fp.created_at DESC
 	`
 
 	rows, err := r.db.Query(query, userID)
@@ -154,14 +173,17 @@ func (r *FoodPostRepository) FindByUserID(userID string) ([]models.FoodPost, err
 
 	for rows.Next() {
 		var post models.FoodPost
+		var imageURLs pq.StringArray
 		err := rows.Scan(
 			&post.ID, &post.UserID, &post.Title, &post.Description,
-			&post.Quantity, &post.Location, &post.ExpiryDate, &post.ImageURL,
+			&post.Quantity, &post.Location, &post.ExpiryDate,
 			&post.Status, &post.CreatedAt, &post.UpdatedAt,
+			&imageURLs,
 		)
 		if err != nil {
 			return nil, err
 		}
+		post.ImageURLs = []string(imageURLs)
 		posts = append(posts, post)
 	}
 

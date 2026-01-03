@@ -12,7 +12,7 @@ type FoodPost struct {
 	Quantity    string    `json:"quantity" db:"quantity" validate:"required,max=100"`
 	Location    string    `json:"location" db:"location" validate:"required,max=255"`
 	ExpiryDate  time.Time `json:"expiryDate" db:"expiry_date" validate:"required"`
-	ImageURL    string    `json:"imageUrl,omitempty" db:"image_url"`
+	ImageURLs   []string  `json:"imageUrls,omitempty"`
 	Status      string    `json:"status" db:"status"`
 	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
@@ -20,11 +20,11 @@ type FoodPost struct {
 }
 
 type CreateFoodPostRequest struct {
-	Title       string    `json:"title" validate:"required,max=255"`
-	Description string    `json:"description" validate:"required,max=500"`
-	Quantity    string    `json:"quantity" validate:"required,max=100"`
-	Location    string    `json:"location" validate:"required,max=255"`
-	ExpiryDate  time.Time `json:"expiryDate" validate:"required"`
+	Title       string    `json:"title" form:"title" validate:"required,max=255"`
+	Description string    `json:"description" form:"description" validate:"required,max=500"`
+	Quantity    string    `json:"quantity" form:"quantity" validate:"required,max=100"`
+	Location    string    `json:"location" form:"location" validate:"required,max=255"`
+	ExpiryDate  time.Time `json:"expiryDate" form:"expiryDate" validate:"required"`
 }
 
 type UpdateFoodPostRequest struct {
@@ -52,6 +52,6 @@ type FoodFeedItem struct {
 	ExpiryDate  time.Time `json:"expiryDate"`
 	Status      string    `json:"status"`
 	OwnerName   string    `json:"ownerName"`
-	ImageURL    *string   `json:"imageUrl,omitempty"`
+	ImageURLs   []string  `json:"imageUrls,omitempty"`
 	IsOwner     bool      `json:"isOwner"`
 }

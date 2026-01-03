@@ -9,18 +9,20 @@ import (
 )
 
 type FoodPostService struct {
-	foodPostRepo *repository.FoodPostRepository
-	imageService *ImageService
+	foodPostRepo  *repository.FoodPostRepository
+	postImageRepo *repository.PostImageRepository
+	imageService  *ImageService
 }
 
-func NewFoodPostService(foodPostRepo *repository.FoodPostRepository, imageService *ImageService) *FoodPostService {
+func NewFoodPostService(foodPostRepo *repository.FoodPostRepository, postImageRepo *repository.PostImageRepository, imageService *ImageService) *FoodPostService {
 	return &FoodPostService{
-		foodPostRepo: foodPostRepo,
-		imageService: imageService,
+		foodPostRepo:  foodPostRepo,
+		postImageRepo: postImageRepo,
+		imageService:  imageService,
 	}
 }
 
-func (s *FoodPostService) CreatePost(userID string, req *models.CreateFoodPostRequest, imageFile *multipart.FileHeader) (*models.FoodPost, error) {
+func (s *FoodPostService) CreatePost(userID string, req *models.CreateFoodPostRequest, imageFiles []*multipart.FileHeader) (*models.FoodPost, error) {
 	post := &models.FoodPost{
 		UserID:      userID,
 		Title:       req.Title,
@@ -30,22 +32,38 @@ func (s *FoodPostService) CreatePost(userID string, req *models.CreateFoodPostRe
 		ExpiryDate:  req.ExpiryDate,
 	}
 
-	// Upload image if provided
-	if imageFile != nil {
-		imageURL, err := s.imageService.UploadImage(imageFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to upload image: %w", err)
-		}
-		post.ImageURL = imageURL
+	// Create post in database first
+	if err := s.foodPostRepo.Create(post); err != nil {
+		return nil, fmt.Errorf("failed to create post: %w", err)
 	}
 
-	// Create post in database
-	if err := s.foodPostRepo.Create(post); err != nil {
-		// If database creation fails and image was uploaded, delete the image
-		if post.ImageURL != "" {
-			_ = s.imageService.DeleteImage(post.ImageURL)
+	// Upload images if provided
+	var uploadedURLs []string
+	if len(imageFiles) > 0 {
+		for i, file := range imageFiles {
+			imageURL, err := s.imageService.UploadImage(file)
+			if err != nil {
+				// Rollback: delete uploaded images and the post
+				for _, url := range uploadedURLs {
+					_ = s.imageService.DeleteImage(url)
+				}
+				_ = s.foodPostRepo.Delete(post.ID)
+				return nil, fmt.Errorf("failed to upload image: %w", err)
+			}
+			uploadedURLs = append(uploadedURLs, imageURL)
+
+			// Save image record to database
+			_, err = s.postImageRepo.Create(post.ID, imageURL, i)
+			if err != nil {
+				// Rollback: delete uploaded images and the post
+				for _, url := range uploadedURLs {
+					_ = s.imageService.DeleteImage(url)
+				}
+				_ = s.foodPostRepo.Delete(post.ID)
+				return nil, fmt.Errorf("failed to save image record: %w", err)
+			}
 		}
-		return nil, fmt.Errorf("failed to create post: %w", err)
+		post.ImageURLs = uploadedURLs
 	}
 
 	return post, nil
@@ -124,12 +142,12 @@ func (s *FoodPostService) DeletePost(postID, userID string) error {
 		return fmt.Errorf("unauthorized: you don't own this post")
 	}
 
-	// Delete image if exists
-	if post.ImageURL != "" {
-		_ = s.imageService.DeleteImage(post.ImageURL)
+	// Delete images from MinIO
+	for _, url := range post.ImageURLs {
+		_ = s.imageService.DeleteImage(url)
 	}
 
-	// Delete from database
+	// Delete from database (cascade will delete post_images records)
 	if err := s.foodPostRepo.Delete(postID); err != nil {
 		return fmt.Errorf("failed to delete post: %w", err)
 	}
@@ -139,4 +157,42 @@ func (s *FoodPostService) DeletePost(postID, userID string) error {
 
 func (s *FoodPostService) GetUserPosts(userID string) ([]models.FoodPost, error) {
 	return s.foodPostRepo.FindByUserID(userID)
+}
+
+// AddImages adds new images to an existing post
+func (s *FoodPostService) AddImages(postID, userID string, imageFiles []*multipart.FileHeader) (*models.FoodPost, error) {
+	// Get existing post
+	post, err := s.foodPostRepo.FindByID(postID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get post: %w", err)
+	}
+	if post == nil {
+		return nil, fmt.Errorf("post not found")
+	}
+
+	// Check ownership
+	if post.UserID != userID {
+		return nil, fmt.Errorf("unauthorized: you don't own this post")
+	}
+
+	// Get current max display order
+	startOrder := len(post.ImageURLs)
+
+	// Upload and save new images
+	for i, file := range imageFiles {
+		imageURL, err := s.imageService.UploadImage(file)
+		if err != nil {
+			return nil, fmt.Errorf("failed to upload image: %w", err)
+		}
+
+		_, err = s.postImageRepo.Create(postID, imageURL, startOrder+i)
+		if err != nil {
+			_ = s.imageService.DeleteImage(imageURL)
+			return nil, fmt.Errorf("failed to save image record: %w", err)
+		}
+
+		post.ImageURLs = append(post.ImageURLs, imageURL)
+	}
+
+	return post, nil
 }

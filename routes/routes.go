@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/minio/minio-go/v7"
+	"github.com/redis/go-redis/v9"
 	"github.com/yourusername/food-sharing-backend/config"
 	"github.com/yourusername/food-sharing-backend/handlers"
 	"github.com/yourusername/food-sharing-backend/middleware"
@@ -13,7 +14,7 @@ import (
 	"github.com/yourusername/food-sharing-backend/services"
 )
 
-func SetupRoutes(e *echo.Echo, db *sql.DB, minioClient *minio.Client, cfg *config.Config) {
+func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClient *minio.Client, cfg *config.Config) {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
 	foodPostRepo := repository.NewFoodPostRepository(db)
@@ -23,8 +24,10 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, minioClient *minio.Client, cfg *confi
 	hungerOfferRepo := repository.NewHungerOfferRepository(db)
 
 	// Initialize services
-	jwtExpiration, _ := time.ParseDuration(cfg.JWT.Expiration)
-	authService := services.NewAuthService(userRepo, cfg.JWT.Secret, jwtExpiration)
+	accessTokenExp, _ := time.ParseDuration(cfg.JWT.AccessTokenExpiration)
+	refreshTokenExp, _ := time.ParseDuration(cfg.JWT.RefreshTokenExpiration)
+	redisService := services.NewRedisService(redisClient)
+	authService := services.NewAuthService(userRepo, redisService, cfg.JWT.Secret, accessTokenExp, refreshTokenExp)
 	imageService := services.NewImageService(minioClient, &cfg.MinIO, cfg.Upload.MaxSize)
 	foodPostService := services.NewFoodPostService(foodPostRepo, postImageRepo, imageService)
 	hungerBroadcastService := services.NewHungerBroadcastService(hungerBroadcastRepo)
@@ -44,6 +47,8 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, minioClient *minio.Client, cfg *confi
 	auth := api.Group("/auth")
 	auth.POST("/register", authHandler.Register)
 	auth.POST("/login", authHandler.Login)
+	auth.POST("/refresh", authHandler.RefreshToken)
+	auth.POST("/logout", authHandler.Logout)
 	auth.GET("/me", authHandler.GetMe, middleware.AuthMiddleware(cfg.JWT.Secret))
 
 	// Feed routes (authentication required)

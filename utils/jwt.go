@@ -8,15 +8,32 @@ import (
 )
 
 type Claims struct {
-	UserID string `json:"sub"`
-	Email  string `json:"email"`
+	UserID    string `json:"sub"`
+	Email     string `json:"email"`
+	TokenType string `json:"type"` // "access" or "refresh"
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userID, email, secret string, expiration time.Duration) (string, error) {
+func GenerateAccessToken(userID, email, secret string, expiration time.Duration) (string, error) {
 	claims := &Claims{
-		UserID: userID,
-		Email:  email,
+		UserID:    userID,
+		Email:     email,
+		TokenType: "access",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiration)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
+func GenerateRefreshToken(userID, email, secret string, expiration time.Duration) (string, error) {
+	claims := &Claims{
+		UserID:    userID,
+		Email:     email,
+		TokenType: "refresh",
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

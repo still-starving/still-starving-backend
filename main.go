@@ -39,11 +39,19 @@ func main() {
 	}
 	log.Println("✓ MinIO connected successfully")
 
+	// Initialize Redis
+	redisClient, err := config.InitRedis(cfg.Redis)
+	if err != nil {
+		log.Fatal("Failed to initialize Redis:", err)
+	}
+	log.Println("✓ Redis connected successfully")
+
 	// Log startup configuration
 	log.Println("========================================")
 	log.Printf("Environment: %s", cfg.Env)
 	log.Printf("Database: %s:%s/%s", cfg.Database.Host, cfg.Database.Port, cfg.Database.DBName)
 	log.Printf("MinIO: %s (Public URL: %s)", cfg.MinIO.Endpoint, cfg.MinIO.PublicURL)
+	log.Printf("Redis: %s:%s", cfg.Redis.Host, cfg.Redis.Port)
 	log.Printf("CORS Allowed Origins: %v", cfg.Server.AllowedOrigins)
 	log.Println("========================================")
 
@@ -62,7 +70,7 @@ func main() {
 	e.Validator = utils.NewValidator()
 
 	// Setup routes
-	routes.SetupRoutes(e, db, minioClient, cfg)
+	routes.SetupRoutes(e, db, redisClient, minioClient, cfg)
 
 	// Health check endpoint
 	e.GET("/health", func(c echo.Context) error {

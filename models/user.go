@@ -25,6 +25,12 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Token string `json:"token"`
-	User  User   `json:"user"`
+	AccessToken  string    `json:"accessToken"`
+	RefreshToken string    `json:"refreshToken"`
+	ExpiresAt    time.Time `json:"expiresAt"`
+	User         User      `json:"user"`
+}
+
+type RefreshRequest struct {
+	RefreshToken string `json:"refreshToken" validate:"required"`
 }

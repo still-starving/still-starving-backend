@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	Database DatabaseConfig
+	Redis    RedisConfig
 	MinIO    MinIOConfig
 	JWT      JWTConfig
 	Server   ServerConfig
@@ -27,6 +28,13 @@ type DatabaseConfig struct {
 	SSLMode  string
 }
 
+type RedisConfig struct {
+	Host     string
+	Port     string
+	Password string
+	DB       int
+}
+
 type MinIOConfig struct {
 	Endpoint  string
 	AccessKey string
@@ -37,8 +45,9 @@ type MinIOConfig struct {
 }
 
 type JWTConfig struct {
-	Secret     string
-	Expiration string
+	Secret                 string
+	AccessTokenExpiration  string
+	RefreshTokenExpiration string
 }
 
 type ServerConfig struct {
@@ -57,6 +66,7 @@ func Load() (*Config, error) {
 	env := getEnv("APP_ENV", "development")
 	useSSL, _ := strconv.ParseBool(getEnv("MINIO_USE_SSL", "false"))
 	maxSize, _ := strconv.ParseInt(getEnv("MAX_UPLOAD_SIZE", "5242880"), 10, 64)
+	redisDB, _ := strconv.Atoi(getEnv("REDIS_DB", "0"))
 
 	config := &Config{
 		Env: env,
@@ -68,6 +78,12 @@ func Load() (*Config, error) {
 			DBName:   getEnv("DB_NAME", "food_sharing"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},
+		Redis: RedisConfig{
+			Host:     getEnv("REDIS_HOST", "localhost"),
+			Port:     getEnv("REDIS_PORT", "6379"),
+			Password: getEnv("REDIS_PASSWORD", ""),
+			DB:       redisDB,
+		},
 		MinIO: MinIOConfig{
 			Endpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
 			AccessKey: getEnv("MINIO_ACCESS_KEY", "minioadmin"),
@@ -77,8 +93,9 @@ func Load() (*Config, error) {
 			PublicURL: getEnv("MINIO_PUBLIC_URL", "http://localhost:9000"),
 		},
 		JWT: JWTConfig{
-			Secret:     getEnv("JWT_SECRET", "your-secret-key"),
-			Expiration: getEnv("JWT_EXPIRATION", "24h"),
+			Secret:                 getEnv("JWT_SECRET", "your-secret-key"),
+			AccessTokenExpiration:  getEnv("JWT_ACCESS_TOKEN_EXPIRATION", "15m"),
+			RefreshTokenExpiration: getEnv("JWT_REFRESH_TOKEN_EXPIRATION", "168h"),
 		},
 		Server: ServerConfig{
 			Port:           getEnv("PORT", "8000"),

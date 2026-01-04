@@ -97,3 +97,56 @@ func (h *AuthHandler) GetMe(c echo.Context) error {
 
 	return utils.SuccessResponse(c, http.StatusOK, user)
 }
+
+// RefreshToken godoc
+// @Summary Refresh access token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.RefreshRequest true "Refresh request"
+// @Success 200 {object} models.LoginResponse
+// @Router /api/auth/refresh [post]
+func (h *AuthHandler) RefreshToken(c echo.Context) error {
+	var req models.RefreshRequest
+	if err := c.Bind(&req); err != nil {
+		return utils.BadRequest(c, "Invalid request body", nil)
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return utils.BadRequest(c, "Validation failed", utils.FormatValidationErrors(err))
+	}
+
+	response, err := h.authService.RefreshTokens(req.RefreshToken)
+	if err != nil {
+		return utils.Unauthorized(c, "Invalid or expired refresh token")
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, response)
+}
+
+// Logout godoc
+// @Summary Logout user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.RefreshRequest true "Logout request"
+// @Success 200 {object} map[string]string
+// @Router /api/auth/logout [post]
+func (h *AuthHandler) Logout(c echo.Context) error {
+	var req models.RefreshRequest
+	if err := c.Bind(&req); err != nil {
+		return utils.BadRequest(c, "Invalid request body", nil)
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return utils.BadRequest(c, "Validation failed", utils.FormatValidationErrors(err))
+	}
+
+	if err := h.authService.Logout(req.RefreshToken); err != nil {
+		return utils.InternalServerError(c, "Failed to logout")
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, map[string]string{
+		"message": "Logged out successfully",
+	})
+}

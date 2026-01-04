@@ -23,4 +23,5 @@ type FoodRequestWithPostInfo struct {
 	FoodRequest
 	PostTitle     string `json:"postTitle" db:"post_title"`
 	PostOwnerName string `json:"postOwnerName" db:"post_owner_name"`
+	PostOwnerID   string `json:"postOwnerId" db:"post_owner_id"`
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/yourusername/food-sharing-backend/config"
 	"github.com/yourusername/food-sharing-backend/middleware"
 	"github.com/yourusername/food-sharing-backend/routes"
+	"github.com/yourusername/food-sharing-backend/services"
 	"github.com/yourusername/food-sharing-backend/utils"
 )
 
@@ -69,8 +70,13 @@ func main() {
 	// Custom validator
 	e.Validator = utils.NewValidator()
 
+	// Initialize and start WebSocket hub
+	hub := services.NewHub()
+	go hub.Run()
+	log.Println("✓ WebSocket hub started")
+
 	// Setup routes
-	routes.SetupRoutes(e, db, redisClient, minioClient, cfg)
+	routes.SetupRoutes(e, db, redisClient, minioClient, cfg, hub)
 
 	// Health check endpoint
 	e.GET("/health", func(c echo.Context) error {

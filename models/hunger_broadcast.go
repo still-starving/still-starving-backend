@@ -6,7 +6,7 @@ import (
 
 type HungerBroadcast struct {
 	ID        string    `json:"id" db:"id"`
-	UserID    string    `json:"userId" db:"user_id"`
+	UserID    string    `json:"ownerId" db:"user_id"`
 	Message   string    `json:"message" db:"message" validate:"required,max=140"`
 	Location  string    `json:"location" db:"location" validate:"required,max=255"`
 	Urgency   string    `json:"urgency" db:"urgency" validate:"oneof=normal urgent"`
@@ -36,6 +36,7 @@ type HungerFeedItem struct {
 	Location   string    `json:"location"`
 	Urgency    string    `json:"urgency"`
 	UserName   string    `json:"userName"`
+	OwnerID    string    `json:"ownerId"`
 	TimePosted time.Time `json:"timePosted"`
 	IsOwner    bool      `json:"isOwner"`
 }

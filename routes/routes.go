@@ -14,7 +14,7 @@ import (
 	"github.com/yourusername/food-sharing-backend/services"
 )
 
-func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClient *minio.Client, cfg *config.Config) {
+func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClient *minio.Client, cfg *config.Config, hub *services.Hub) {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
 	foodPostRepo := repository.NewFoodPostRepository(db)
@@ -22,6 +22,8 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 	hungerBroadcastRepo := repository.NewHungerBroadcastRepository(db)
 	foodRequestRepo := repository.NewFoodRequestRepository(db)
 	hungerOfferRepo := repository.NewHungerOfferRepository(db)
+	conversationRepo := repository.NewConversationRepository(db)
+	messageRepo := repository.NewMessageRepository(db)
 
 	// Initialize services
 	accessTokenExp, _ := time.ParseDuration(cfg.JWT.AccessTokenExpiration)
@@ -32,6 +34,8 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 	foodPostService := services.NewFoodPostService(foodPostRepo, postImageRepo, imageService)
 	hungerBroadcastService := services.NewHungerBroadcastService(hungerBroadcastRepo)
 	feedService := services.NewFeedService(foodPostRepo, hungerBroadcastRepo)
+	conversationService := services.NewConversationService(conversationRepo, foodPostRepo)
+	messageService := services.NewMessageService(messageRepo, conversationRepo)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
@@ -39,9 +43,15 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 	hungerBroadcastHandler := handlers.NewHungerBroadcastHandler(hungerBroadcastService, hungerOfferRepo)
 	feedHandler := handlers.NewFeedHandler(feedService)
 	userHandler := handlers.NewUserHandler(userRepo, foodRequestRepo, foodPostService, hungerBroadcastService)
+	conversationHandler := handlers.NewConversationHandler(conversationService)
+	messageHandler := handlers.NewMessageHandler(messageService)
+	wsHandler := handlers.NewWebSocketHandler(hub, messageService, conversationService, cfg.JWT.Secret)
 
 	// API group
 	api := e.Group("/api")
+
+	// WebSocket endpoint (authentication via query param)
+	api.GET("/ws", wsHandler.HandleWebSocket)
 
 	// Auth routes (no authentication required)
 	auth := api.Group("/auth")
@@ -73,6 +83,17 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 	hungerBroadcasts.GET("/:id", hungerBroadcastHandler.GetHungerBroadcast)
 	hungerBroadcasts.DELETE("/:id", hungerBroadcastHandler.DeleteHungerBroadcast, middleware.AuthMiddleware(cfg.JWT.Secret))
 	hungerBroadcasts.POST("/:id/offer", hungerBroadcastHandler.OfferFood, middleware.AuthMiddleware(cfg.JWT.Secret))
+
+	// Conversation routes (all require authentication)
+	conversations := api.Group("/conversations", middleware.AuthMiddleware(cfg.JWT.Secret))
+	conversations.POST("", conversationHandler.CreateOrGetConversation)
+	conversations.GET("", conversationHandler.GetUserConversations)
+	conversations.GET("/:id", conversationHandler.GetConversation)
+	conversations.GET("/:id/messages", messageHandler.GetMessages)
+	conversations.PUT("/:id/messages/read", messageHandler.MarkAsRead)
+
+	// Message routes (all require authentication)
+	api.GET("/messages/unread-count", messageHandler.GetUnreadCount, middleware.AuthMiddleware(cfg.JWT.Secret))
 
 	// User routes (all require authentication)
 	api.GET("/my-requests", userHandler.GetMyRequests, middleware.AuthMiddleware(cfg.JWT.Secret))

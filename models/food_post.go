@@ -6,7 +6,7 @@ import (
 
 type FoodPost struct {
 	ID          string    `json:"id" db:"id"`
-	UserID      string    `json:"userId" db:"user_id"`
+	UserID      string    `json:"ownerId" db:"user_id"`
 	Title       string    `json:"title" db:"title" validate:"required,max=255"`
 	Description string    `json:"description" db:"description" validate:"required,max=500"`
 	Quantity    string    `json:"quantity" db:"quantity" validate:"required,max=100"`
@@ -52,6 +52,7 @@ type FoodFeedItem struct {
 	ExpiryDate  time.Time `json:"expiryDate"`
 	Status      string    `json:"status"`
 	OwnerName   string    `json:"ownerName"`
+	OwnerID     string    `json:"ownerId"`
 	ImageURLs   []string  `json:"imageUrls,omitempty"`
 	IsOwner     bool      `json:"isOwner"`
 }

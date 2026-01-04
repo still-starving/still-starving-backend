@@ -41,6 +41,7 @@ func (s *FeedService) GetFeed(feedType, userID string) ([]interface{}, error) {
 				ExpiryDate:  post.ExpiryDate,
 				Status:      post.Status,
 				OwnerName:   post.UserName,
+				OwnerID:     post.UserID,
 				ImageURLs:   post.ImageURLs,
 				IsOwner:     post.UserID == userID,
 			}
@@ -63,6 +64,7 @@ func (s *FeedService) GetFeed(feedType, userID string) ([]interface{}, error) {
 				Location:   broadcast.Location,
 				Urgency:    broadcast.Urgency,
 				UserName:   broadcast.UserName,
+				OwnerID:    broadcast.UserID,
 				TimePosted: broadcast.CreatedAt,
 				IsOwner:    broadcast.UserID == userID,
 			}

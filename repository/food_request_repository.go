@@ -70,7 +70,7 @@ func (r *FoodRequestRepository) FindByUserID(userID string) ([]models.FoodReques
 	query := `
 		SELECT fr.id, fr.food_post_id, fr.user_id, fr.message, fr.status,
 		       fr.created_at, fr.updated_at,
-		       fp.title as post_title, u.name as post_owner_name
+		       fp.title as post_title, u.name as post_owner_name, fp.user_id as post_owner_id
 		FROM food_requests fr
 		JOIN food_posts fp ON fr.food_post_id = fp.id
 		JOIN users u ON fp.user_id = u.id
@@ -89,7 +89,7 @@ func (r *FoodRequestRepository) FindByUserID(userID string) ([]models.FoodReques
 		err := rows.Scan(
 			&request.ID, &request.FoodPostID, &request.UserID, &request.Message,
 			&request.Status, &request.CreatedAt, &request.UpdatedAt,
-			&request.PostTitle, &request.PostOwnerName,
+			&request.PostTitle, &request.PostOwnerName, &request.PostOwnerID,
 		)
 		if err != nil {
 			return nil, err

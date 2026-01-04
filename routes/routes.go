@@ -39,7 +39,7 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
-	foodPostHandler := handlers.NewFoodPostHandler(foodPostService, foodRequestRepo, hub)
+	foodPostHandler := handlers.NewFoodPostHandler(foodPostService, foodRequestRepo, hub, conversationService, userRepo)
 	hungerBroadcastHandler := handlers.NewHungerBroadcastHandler(hungerBroadcastService, hungerOfferRepo, hub)
 	feedHandler := handlers.NewFeedHandler(feedService)
 	userHandler := handlers.NewUserHandler(userRepo, foodRequestRepo, foodPostService, hungerBroadcastService)
@@ -68,7 +68,7 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 	foodPosts := api.Group("/food-posts")
 	foodPosts.POST("", foodPostHandler.CreateFoodPost, middleware.AuthMiddleware(cfg.JWT.Secret))
 	foodPosts.GET("", foodPostHandler.GetFoodPosts)
-	foodPosts.GET("/:id", foodPostHandler.GetFoodPost)
+	foodPosts.GET("/:id", foodPostHandler.GetFoodPost, middleware.OptionalAuthMiddleware(cfg.JWT.Secret))
 	foodPosts.PUT("/:id", foodPostHandler.UpdateFoodPost, middleware.AuthMiddleware(cfg.JWT.Secret))
 	foodPosts.DELETE("/:id", foodPostHandler.DeleteFoodPost, middleware.AuthMiddleware(cfg.JWT.Secret))
 	foodPosts.POST("/:id/request", foodPostHandler.RequestFood, middleware.AuthMiddleware(cfg.JWT.Secret))

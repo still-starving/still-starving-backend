@@ -32,7 +32,7 @@ func (r *FoodRequestRepository) Create(request *models.FoodRequest) error {
 }
 
 func (r *FoodRequestRepository) FindByPostID(postID string) ([]models.FoodRequest, error) {
-	var requests []models.FoodRequest
+	requests := make([]models.FoodRequest, 0)
 
 	query := `
 		SELECT fr.id, fr.food_post_id, fr.user_id, fr.message, fr.status,
@@ -65,7 +65,7 @@ func (r *FoodRequestRepository) FindByPostID(postID string) ([]models.FoodReques
 }
 
 func (r *FoodRequestRepository) FindByUserID(userID string) ([]models.FoodRequestWithPostInfo, error) {
-	var requests []models.FoodRequestWithPostInfo
+	requests := make([]models.FoodRequestWithPostInfo, 0)
 
 	query := `
 		SELECT fr.id, fr.food_post_id, fr.user_id, fr.message, fr.status,

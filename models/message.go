@@ -34,6 +34,8 @@ const (
 	WSMessageTypeConnected       WSMessageType = "connected"
 	WSMessageTypeFoodPost        WSMessageType = "food_post"
 	WSMessageTypeHungerBroadcast WSMessageType = "hunger_broadcast"
+	WSMessageTypeRequestCreated  WSMessageType = "request_created"
+	WSMessageTypeRequestUpdated  WSMessageType = "request_updated"
 )
 
 type WSMessage struct {
@@ -44,5 +46,6 @@ type WSMessage struct {
 	Error           string          `json:"error,omitempty"`
 	FoodPost        *FoodFeedItem   `json:"foodPost,omitempty"`
 	HungerBroadcast *HungerFeedItem `json:"hungerBroadcast,omitempty"`
+	FoodRequest     *FoodRequest    `json:"foodRequest,omitempty"`
 	Timestamp       time.Time       `json:"timestamp"`
 }

@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"encoding/json"
 	"mime/multipart"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/yourusername/food-sharing-backend/middleware"
@@ -16,12 +18,14 @@ import (
 type FoodPostHandler struct {
 	foodPostService *services.FoodPostService
 	requestRepo     *repository.FoodRequestRepository
+	hub             *services.Hub
 }
 
-func NewFoodPostHandler(foodPostService *services.FoodPostService, requestRepo *repository.FoodRequestRepository) *FoodPostHandler {
+func NewFoodPostHandler(foodPostService *services.FoodPostService, requestRepo *repository.FoodRequestRepository, hub *services.Hub) *FoodPostHandler {
 	return &FoodPostHandler{
 		foodPostService: foodPostService,
 		requestRepo:     requestRepo,
+		hub:             hub,
 	}
 }
 
@@ -60,6 +64,32 @@ func (h *FoodPostHandler) CreateFoodPost(c echo.Context) error {
 	post, err := h.foodPostService.CreatePost(userID, &req, imageFiles)
 	if err != nil {
 		return utils.InternalServerError(c, err.Error())
+	}
+
+	// Broadcast the new post to all connected clients
+	feedItem := &models.FoodFeedItem{
+		Type:        "food",
+		ID:          post.ID,
+		Title:       post.Title,
+		Description: post.Description,
+		Quantity:    post.Quantity,
+		Location:    post.Location,
+		ExpiryDate:  post.ExpiryDate,
+		Status:      post.Status,
+		OwnerName:   post.UserName, // Note: UserName might be empty here as create returns raw post
+		OwnerID:     post.UserID,
+		ImageURLs:   post.ImageURLs,
+		IsOwner:     false, // For broadcast, receiver is not owner
+	}
+
+	wsMsg := models.WSMessage{
+		Type:      models.WSMessageTypeFoodPost,
+		FoodPost:  feedItem,
+		Timestamp: time.Now(),
+	}
+
+	if msgBytes, err := json.Marshal(wsMsg); err == nil {
+		h.hub.BroadcastToAll(msgBytes)
 	}
 
 	return utils.SuccessResponse(c, http.StatusCreated, post)

@@ -39,6 +39,9 @@ type Hub struct {
 	// Broadcast messages to specific users
 	Broadcast chan *BroadcastMessage
 
+	// Broadcast messages to all connected clients
+	BroadcastAll chan []byte
+
 	// Mutex for thread-safe operations
 	mu sync.RWMutex
 }
@@ -50,10 +53,11 @@ type BroadcastMessage struct {
 
 func NewHub() *Hub {
 	return &Hub{
-		Clients:    make(map[string]*Client),
-		Register:   make(chan *Client),
-		Unregister: make(chan *Client),
-		Broadcast:  make(chan *BroadcastMessage),
+		Clients:      make(map[string]*Client),
+		Register:     make(chan *Client),
+		Unregister:   make(chan *Client),
+		Broadcast:    make(chan *BroadcastMessage),
+		BroadcastAll: make(chan []byte),
 	}
 }
 
@@ -114,8 +118,23 @@ func (h *Hub) Run() {
 				}
 			}
 			h.mu.RUnlock()
+
+		case message := <-h.BroadcastAll:
+			h.mu.RLock()
+			for _, client := range h.Clients {
+				select {
+				case client.Send <- message:
+				default:
+					log.Printf("Warning: Failed to broadcast to user %s (channel full)", client.UserID)
+				}
+			}
+			h.mu.RUnlock()
 		}
 	}
+}
+
+func (h *Hub) BroadcastToAll(message []byte) {
+	h.BroadcastAll <- message
 }
 
 func (h *Hub) BroadcastToUsers(userIDs []string, message []byte) {

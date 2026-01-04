@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/yourusername/food-sharing-backend/middleware"
@@ -15,12 +17,14 @@ import (
 type HungerBroadcastHandler struct {
 	hungerBroadcastService *services.HungerBroadcastService
 	offerRepo              *repository.HungerOfferRepository
+	hub                    *services.Hub
 }
 
-func NewHungerBroadcastHandler(hungerBroadcastService *services.HungerBroadcastService, offerRepo *repository.HungerOfferRepository) *HungerBroadcastHandler {
+func NewHungerBroadcastHandler(hungerBroadcastService *services.HungerBroadcastService, offerRepo *repository.HungerOfferRepository, hub *services.Hub) *HungerBroadcastHandler {
 	return &HungerBroadcastHandler{
 		hungerBroadcastService: hungerBroadcastService,
 		offerRepo:              offerRepo,
+		hub:                    hub,
 	}
 }
 
@@ -48,6 +52,29 @@ func (h *HungerBroadcastHandler) CreateHungerBroadcast(c echo.Context) error {
 	broadcast, err := h.hungerBroadcastService.CreateBroadcast(userID, &req)
 	if err != nil {
 		return utils.InternalServerError(c, "Failed to create broadcast")
+	}
+
+	// Broadcast the new item to all connected clients
+	feedItem := &models.HungerFeedItem{
+		Type:       "hunger",
+		ID:         broadcast.ID,
+		Message:    broadcast.Message,
+		Location:   broadcast.Location,
+		Urgency:    broadcast.Urgency,
+		UserName:   broadcast.UserName, // Note: UserName might be empty here
+		OwnerID:    broadcast.UserID,
+		TimePosted: broadcast.CreatedAt,
+		IsOwner:    false, // For broadcast, receiver is not owner
+	}
+
+	wsMsg := models.WSMessage{
+		Type:            models.WSMessageTypeHungerBroadcast,
+		HungerBroadcast: feedItem,
+		Timestamp:       time.Now(),
+	}
+
+	if msgBytes, err := json.Marshal(wsMsg); err == nil {
+		h.hub.BroadcastToAll(msgBytes)
 	}
 
 	return utils.SuccessResponse(c, http.StatusCreated, broadcast)

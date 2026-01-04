@@ -27,18 +27,22 @@ type SendMessageRequest struct {
 type WSMessageType string
 
 const (
-	WSMessageTypeChat      WSMessageType = "chat"
-	WSMessageTypeTyping    WSMessageType = "typing"
-	WSMessageTypeRead      WSMessageType = "read"
-	WSMessageTypeError     WSMessageType = "error"
-	WSMessageTypeConnected WSMessageType = "connected"
+	WSMessageTypeChat            WSMessageType = "chat"
+	WSMessageTypeTyping          WSMessageType = "typing"
+	WSMessageTypeRead            WSMessageType = "read"
+	WSMessageTypeError           WSMessageType = "error"
+	WSMessageTypeConnected       WSMessageType = "connected"
+	WSMessageTypeFoodPost        WSMessageType = "food_post"
+	WSMessageTypeHungerBroadcast WSMessageType = "hunger_broadcast"
 )
 
 type WSMessage struct {
-	Type           WSMessageType `json:"type"`
-	ConversationID string        `json:"conversationId,omitempty"`
-	Message        *Message      `json:"message,omitempty"`
-	Content        string        `json:"content,omitempty"`
-	Error          string        `json:"error,omitempty"`
-	Timestamp      time.Time     `json:"timestamp"`
+	Type            WSMessageType   `json:"type"`
+	ConversationID  string          `json:"conversationId,omitempty"`
+	Message         *Message        `json:"message,omitempty"`
+	Content         string          `json:"content,omitempty"`
+	Error           string          `json:"error,omitempty"`
+	FoodPost        *FoodFeedItem   `json:"foodPost,omitempty"`
+	HungerBroadcast *HungerFeedItem `json:"hungerBroadcast,omitempty"`
+	Timestamp       time.Time       `json:"timestamp"`
 }

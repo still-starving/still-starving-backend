@@ -39,8 +39,8 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
-	foodPostHandler := handlers.NewFoodPostHandler(foodPostService, foodRequestRepo)
-	hungerBroadcastHandler := handlers.NewHungerBroadcastHandler(hungerBroadcastService, hungerOfferRepo)
+	foodPostHandler := handlers.NewFoodPostHandler(foodPostService, foodRequestRepo, hub)
+	hungerBroadcastHandler := handlers.NewHungerBroadcastHandler(hungerBroadcastService, hungerOfferRepo, hub)
 	feedHandler := handlers.NewFeedHandler(feedService)
 	userHandler := handlers.NewUserHandler(userRepo, foodRequestRepo, foodPostService, hungerBroadcastService)
 	conversationHandler := handlers.NewConversationHandler(conversationService)

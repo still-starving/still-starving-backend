@@ -50,7 +50,7 @@ func ValidateToken(tokenString, secret string) (*Claims, error) {
 			return nil, errors.New("unexpected signing method")
 		}
 		return []byte(secret), nil
-	})
+	}, jwt.WithLeeway(1*time.Minute))
 
 	if err != nil {
 		return nil, err

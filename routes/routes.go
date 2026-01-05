@@ -34,7 +34,7 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 	foodPostService := services.NewFoodPostService(foodPostRepo, postImageRepo, imageService)
 	hungerBroadcastService := services.NewHungerBroadcastService(hungerBroadcastRepo)
 	feedService := services.NewFeedService(foodPostRepo, hungerBroadcastRepo)
-	conversationService := services.NewConversationService(conversationRepo, foodPostRepo)
+	conversationService := services.NewConversationService(conversationRepo, foodPostRepo, hungerBroadcastRepo)
 	messageService := services.NewMessageService(messageRepo, conversationRepo)
 
 	// Initialize handlers
@@ -44,7 +44,7 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 	feedHandler := handlers.NewFeedHandler(feedService)
 	userHandler := handlers.NewUserHandler(userRepo, foodRequestRepo, foodPostService, hungerBroadcastService)
 	conversationHandler := handlers.NewConversationHandler(conversationService)
-	messageHandler := handlers.NewMessageHandler(messageService)
+	messageHandler := handlers.NewMessageHandler(messageService, imageService)
 	wsHandler := handlers.NewWebSocketHandler(hub, messageService, conversationService, cfg.JWT.Secret)
 
 	// API group
@@ -90,10 +90,12 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 	conversations.GET("", conversationHandler.GetUserConversations)
 	conversations.GET("/:id", conversationHandler.GetConversation)
 	conversations.GET("/:id/messages", messageHandler.GetMessages)
+	conversations.POST("/:id/messages", messageHandler.SendMessage)
 	conversations.PUT("/:id/messages/read", messageHandler.MarkAsRead)
 
 	// Message routes (all require authentication)
 	api.GET("/messages/unread-count", messageHandler.GetUnreadCount, middleware.AuthMiddleware(cfg.JWT.Secret))
+	api.POST("/messages/upload", messageHandler.UploadMessageImage, middleware.AuthMiddleware(cfg.JWT.Secret))
 
 	// User routes (all require authentication)
 	api.GET("/my-requests", userHandler.GetMyRequests, middleware.AuthMiddleware(cfg.JWT.Secret))

@@ -18,6 +18,8 @@ type FoodPost struct {
 	UpdatedAt    time.Time `json:"updatedAt" db:"updated_at"`
 	UserName     string    `json:"userName,omitempty" db:"user_name"`
 	RequestCount int       `json:"requestCount" db:"-"` // Not from DB, populated in handler
+	Price        *float64  `json:"price,omitempty" db:"price"`
+	Currency     string    `json:"currency,omitempty" db:"currency"`
 }
 
 type CreateFoodPostRequest struct {
@@ -26,6 +28,8 @@ type CreateFoodPostRequest struct {
 	Quantity    string    `json:"quantity" form:"quantity" validate:"required,max=100"`
 	Location    string    `json:"location" form:"location" validate:"required,max=255"`
 	ExpiryDate  time.Time `json:"expiryDate" form:"expiryDate" validate:"required"`
+	Price       *float64  `json:"price" form:"price"`
+	Currency    string    `json:"currency" form:"currency"`
 }
 
 type UpdateFoodPostRequest struct {
@@ -35,6 +39,8 @@ type UpdateFoodPostRequest struct {
 	Location    string    `json:"location" validate:"omitempty,max=255"`
 	ExpiryDate  time.Time `json:"expiryDate"`
 	Status      string    `json:"status" validate:"omitempty,oneof=available claimed expired"`
+	Price       *float64  `json:"price" validate:"omitempty"`
+	Currency    string    `json:"currency" validate:"omitempty,max=3"`
 }
 
 type FoodPostWithOwnership struct {
@@ -56,4 +62,6 @@ type FoodFeedItem struct {
 	OwnerID     string    `json:"ownerId"`
 	ImageURLs   []string  `json:"imageUrls,omitempty"`
 	IsOwner     bool      `json:"isOwner"`
+	Price       *float64  `json:"price,omitempty"`
+	Currency    string    `json:"currency,omitempty"`
 }

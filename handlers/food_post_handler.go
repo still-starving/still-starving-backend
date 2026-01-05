@@ -84,6 +84,8 @@ func (h *FoodPostHandler) CreateFoodPost(c echo.Context) error {
 		OwnerName:   post.UserName, // Note: UserName might be empty here as create returns raw post
 		OwnerID:     post.UserID,
 		ImageURLs:   post.ImageURLs,
+		Price:       post.Price,
+		Currency:    post.Currency,
 		IsOwner:     false, // For broadcast, receiver is not owner
 	}
 
@@ -401,9 +403,8 @@ func (h *FoodPostHandler) AcceptRequest(c echo.Context) error {
 	}
 
 	// Create a conversation between owner and requester
-	// Order: foodPostID, currentUserID, otherParticipantID
-	// We need the conversation object to get ID if we want to send it, but CreateOrGet returns *Conversation.
-	conversation, err := h.conversationService.CreateOrGetConversation(postID, userID, request.UserID)
+	// Order: foodPostID, hungerBroadcastID, currentUserID, otherParticipantID
+	conversation, err := h.conversationService.CreateOrGetConversation(&postID, nil, userID, request.UserID)
 	if err != nil {
 		// Log error but don't fail the request acceptance
 		// log.Printf("Failed to create conversation: %v", err)

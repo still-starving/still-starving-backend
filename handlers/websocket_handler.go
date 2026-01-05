@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"github.com/yourusername/food-sharing-backend/models"
 	"github.com/yourusername/food-sharing-backend/services"
+	"github.com/yourusername/food-sharing-backend/utils"
 )
 
 var upgrader = websocket.Upgrader{
@@ -54,35 +54,15 @@ func (h *WebSocketHandler) HandleWebSocket(c echo.Context) error {
 	}
 
 	// Validate JWT token
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return []byte(h.jwtSecret), nil
-	})
-
-	if err != nil || !token.Valid {
-		log.Printf("WebSocket JWT validation failed - Error: %v, Valid: %v", err, token != nil && token.Valid)
+	claims, err := utils.ValidateToken(tokenString, h.jwtSecret)
+	if err != nil {
+		log.Printf("WebSocket JWT validation failed - Error: %v", err)
 		return c.JSON(http.StatusUnauthorized, map[string]string{
-			"error": "Invalid authentication token",
+			"error": "Invalid or expired authentication token",
 		})
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		log.Printf("WebSocket auth failed: invalid token claims type")
-		return c.JSON(http.StatusUnauthorized, map[string]string{
-			"error": "Invalid token claims",
-		})
-	}
-
-	log.Printf("WebSocket JWT claims: %+v", claims)
-
-	userID, ok := claims["sub"].(string)
-	if !ok {
-		log.Printf("WebSocket auth failed: sub claim not found or not a string")
-		return c.JSON(http.StatusUnauthorized, map[string]string{
-			"error": "Invalid user ID in token",
-		})
-	}
-
+	userID := claims.UserID
 	log.Printf("WebSocket connection authenticated for user: %s", userID)
 
 	// Upgrade connection to WebSocket
@@ -144,7 +124,15 @@ func (h *WebSocketHandler) handleChatMessage(client *services.Client, wsMsg *mod
 	}
 
 	// Save message to database
-	savedMessage, err := h.messageService.SendMessage(wsMsg.ConversationID, client.UserID, wsMsg.Content)
+	// Passing wsMsg.Message.Type if it exists, otherwise mapping WSMessage.Type if appropriate
+	actualMsgType := "text"
+	if wsMsg.Message != nil && wsMsg.Message.Type != "" {
+		actualMsgType = wsMsg.Message.Type
+	} else if string(wsMsg.Type) == "image" || string(wsMsg.Type) == "price_offer" {
+		actualMsgType = string(wsMsg.Type)
+	}
+
+	savedMessage, err := h.messageService.SendMessage(wsMsg.ConversationID, client.UserID, wsMsg.Content, actualMsgType, wsMsg.Metadata)
 	if err != nil {
 		log.Printf("Failed to save message: %v", err)
 		h.sendError(client, "Failed to send message")
@@ -164,11 +152,12 @@ func (h *WebSocketHandler) handleChatMessage(client *services.Client, wsMsg *mod
 		otherParticipantID = conversation.Participant2ID
 	}
 
-	// Broadcast to both participants
+	// Broadcast to both participants using "chat" event type
 	responseMsg := models.WSMessage{
 		Type:           models.WSMessageTypeChat,
 		ConversationID: wsMsg.ConversationID,
 		Message:        savedMessage,
+		Metadata:       savedMessage.Metadata,
 		Timestamp:      time.Now(),
 	}
 

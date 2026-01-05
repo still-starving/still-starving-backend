@@ -44,6 +44,8 @@ func (s *FeedService) GetFeed(feedType, userID string) ([]interface{}, error) {
 				OwnerID:     post.UserID,
 				ImageURLs:   post.ImageURLs,
 				IsOwner:     post.UserID == userID,
+				Price:       post.Price,
+				Currency:    post.Currency,
 			}
 			feed = append(feed, feedItem)
 		}

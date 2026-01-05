@@ -22,7 +22,7 @@ func NewMessageService(
 	}
 }
 
-func (s *MessageService) SendMessage(conversationID, senderID, content string) (*models.Message, error) {
+func (s *MessageService) SendMessage(conversationID, senderID, content, msgType string, metadata map[string]interface{}) (*models.Message, error) {
 	// Validate sender is participant
 	isParticipant, err := s.conversationRepo.IsParticipant(conversationID, senderID)
 	if err != nil {
@@ -33,8 +33,13 @@ func (s *MessageService) SendMessage(conversationID, senderID, content string) (
 		return nil, errors.New("unauthorized: user is not a participant in this conversation")
 	}
 
+	// Default type to text if empty
+	if msgType == "" {
+		msgType = "text"
+	}
+
 	// Create message
-	message, err := s.messageRepo.Create(conversationID, senderID, content)
+	message, err := s.messageRepo.Create(conversationID, senderID, content, msgType, metadata)
 	if err != nil {
 		return nil, err
 	}

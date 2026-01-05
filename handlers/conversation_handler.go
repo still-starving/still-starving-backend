@@ -31,9 +31,19 @@ func (h *ConversationHandler) CreateOrGetConversation(c echo.Context) error {
 		return utils.BadRequest(c, err.Error(), nil)
 	}
 
-	conversation, err := h.conversationService.CreateOrGetConversation(req.FoodPostID, userID, req.OtherParticipantID)
+	var foodPostID *string
+	if req.FoodPostID != "" {
+		foodPostID = &req.FoodPostID
+	}
+
+	var hungerBroadcastID *string
+	if req.HungerBroadcastID != "" {
+		hungerBroadcastID = &req.HungerBroadcastID
+	}
+
+	conversation, err := h.conversationService.CreateOrGetConversation(foodPostID, hungerBroadcastID, userID, req.OtherParticipantID)
 	if err != nil {
-		if err.Error() == "food post not found" {
+		if err.Error() == "food post not found" || err.Error() == "hunger broadcast not found" {
 			return utils.NotFound(c, err.Error())
 		}
 		return utils.InternalServerError(c, "Failed to create conversation")

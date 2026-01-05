@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,28 +17,37 @@ func NewMessageRepository(db *sql.DB) *MessageRepository {
 	return &MessageRepository{db: db}
 }
 
-func (r *MessageRepository) Create(conversationID, senderID, content string) (*models.Message, error) {
+func (r *MessageRepository) Create(conversationID, senderID, content, msgType string, metadata map[string]interface{}) (*models.Message, error) {
 	message := &models.Message{
 		ID:             uuid.New().String(),
 		ConversationID: conversationID,
 		SenderID:       senderID,
 		Content:        content,
+		Type:           msgType,
+		Metadata:       metadata,
 		IsRead:         false,
 		CreatedAt:      time.Now(),
 	}
 
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return nil, err
+	}
+
 	query := `
-		INSERT INTO messages (id, conversation_id, sender_id, content, is_read, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, conversation_id, sender_id, content, is_read, created_at
+		INSERT INTO messages (id, conversation_id, sender_id, content, type, metadata, is_read, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, conversation_id, sender_id, content, type, metadata, is_read, created_at
 	`
 
-	err := r.db.QueryRow(
+	err = r.db.QueryRow(
 		query,
 		message.ID,
 		message.ConversationID,
 		message.SenderID,
 		message.Content,
+		message.Type,
+		metadataJSON,
 		message.IsRead,
 		message.CreatedAt,
 	).Scan(
@@ -45,9 +55,15 @@ func (r *MessageRepository) Create(conversationID, senderID, content string) (*m
 		&message.ConversationID,
 		&message.SenderID,
 		&message.Content,
+		&message.Type,
+		&metadataJSON,
 		&message.IsRead,
 		&message.CreatedAt,
 	)
+
+	if err == nil && len(metadataJSON) > 0 && string(metadataJSON) != "null" {
+		json.Unmarshal(metadataJSON, &message.Metadata)
+	}
 
 	if err != nil {
 		return nil, err
@@ -63,6 +79,8 @@ func (r *MessageRepository) GetByConversationID(conversationID string, limit, of
 			m.conversation_id,
 			m.sender_id,
 			m.content,
+			m.type,
+			m.metadata,
 			m.is_read,
 			m.created_at,
 			u.name as sender_name
@@ -80,6 +98,7 @@ func (r *MessageRepository) GetByConversationID(conversationID string, limit, of
 	defer rows.Close()
 
 	var messages []models.MessageWithSender
+	var metadataJSON []byte
 	for rows.Next() {
 		var msg models.MessageWithSender
 		err := rows.Scan(
@@ -87,12 +106,17 @@ func (r *MessageRepository) GetByConversationID(conversationID string, limit, of
 			&msg.ConversationID,
 			&msg.SenderID,
 			&msg.Content,
+			&msg.Type,
+			&metadataJSON,
 			&msg.IsRead,
 			&msg.CreatedAt,
 			&msg.SenderName,
 		)
 		if err != nil {
 			return nil, err
+		}
+		if len(metadataJSON) > 0 && string(metadataJSON) != "null" {
+			json.Unmarshal(metadataJSON, &msg.Metadata)
 		}
 		messages = append(messages, msg)
 	}

@@ -30,6 +30,8 @@ func (s *FoodPostService) CreatePost(userID string, req *models.CreateFoodPostRe
 		Quantity:    req.Quantity,
 		Location:    req.Location,
 		ExpiryDate:  req.ExpiryDate,
+		Price:       req.Price,
+		Currency:    req.Currency,
 	}
 
 	// Create post in database first
@@ -117,6 +119,12 @@ func (s *FoodPostService) UpdatePost(postID, userID string, req *models.UpdateFo
 	}
 	if req.Status != "" {
 		post.Status = req.Status
+	}
+	if req.Price != nil {
+		post.Price = req.Price
+	}
+	if req.Currency != "" {
+		post.Currency = req.Currency
 	}
 
 	// Update in database

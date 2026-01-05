@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -196,4 +197,30 @@ func (h *HungerBroadcastHandler) OfferFood(c echo.Context) error {
 	}
 
 	return utils.SuccessResponse(c, http.StatusCreated, offer)
+}
+
+// ResolveHungerBroadcast godoc
+// @Summary Resolve a hunger broadcast
+// @Tags hunger-broadcasts
+// @Security BearerAuth
+// @Param id path string true "Broadcast ID"
+// @Success 200
+// @Router /api/hunger-broadcasts/{id}/resolve [put]
+func (h *HungerBroadcastHandler) ResolveHungerBroadcast(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	id := c.Param("id")
+
+	err := h.hungerBroadcastService.ResolveBroadcast(id, userID)
+	if err != nil {
+		if err.Error() == "broadcast not found" {
+			return utils.NotFound(c, err.Error())
+		}
+		if err.Error() == "unauthorized: you don't own this broadcast" {
+			return utils.Forbidden(c, err.Error())
+		}
+		log.Printf("Error resolving broadcast: %v", err)
+		return utils.ErrorResponseJSON(c, 500, "INTERNAL_SERVER_ERROR", "Failed to resolve broadcast", err.Error())
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, map[string]string{"message": "Broadcast marked as resolved"})
 }

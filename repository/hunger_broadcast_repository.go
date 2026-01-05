@@ -149,3 +149,43 @@ func (r *HungerBroadcastRepository) FindByUserID(userID string) ([]models.Hunger
 
 	return broadcasts, nil
 }
+func (r *HungerBroadcastRepository) UpdateStatus(id, status string) error {
+	query := `UPDATE hunger_broadcasts SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+	_, err := r.db.Exec(query, status, id)
+	return err
+}
+func (r *HungerBroadcastRepository) FindExpiredBroadcasts() ([]models.HungerBroadcast, error) {
+	var broadcasts []models.HungerBroadcast
+
+	query := `
+		SELECT id, user_id, message, location, urgency, status, expires_at, created_at, updated_at
+		FROM hunger_broadcasts
+		WHERE status = 'active'
+		AND (
+			(urgency = 'urgent' AND created_at < NOW() - INTERVAL '1 hour')
+			OR
+			(urgency = 'normal' AND created_at < NOW() - INTERVAL '2 hours')
+		)
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var b models.HungerBroadcast
+		err := rows.Scan(
+			&b.ID, &b.UserID, &b.Message, &b.Location,
+			&b.Urgency, &b.Status, &b.ExpiresAt,
+			&b.CreatedAt, &b.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		broadcasts = append(broadcasts, b)
+	}
+
+	return broadcasts, nil
+}

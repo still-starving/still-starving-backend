@@ -16,6 +16,7 @@ type UserHandler struct {
 	foodRequestRepo        *repository.FoodRequestRepository
 	foodPostService        *services.FoodPostService
 	hungerBroadcastService *services.HungerBroadcastService
+	notificationRepo       *repository.NotificationRepository
 }
 
 func NewUserHandler(
@@ -23,12 +24,14 @@ func NewUserHandler(
 	foodRequestRepo *repository.FoodRequestRepository,
 	foodPostService *services.FoodPostService,
 	hungerBroadcastService *services.HungerBroadcastService,
+	notificationRepo *repository.NotificationRepository,
 ) *UserHandler {
 	return &UserHandler{
 		userRepo:               userRepo,
 		foodRequestRepo:        foodRequestRepo,
 		foodPostService:        foodPostService,
 		hungerBroadcastService: hungerBroadcastService,
+		notificationRepo:       notificationRepo,
 	}
 }
 
@@ -247,4 +250,77 @@ func (h *UserHandler) UpdateProfile(c echo.Context) error {
 	}
 
 	return utils.SuccessResponse(c, http.StatusOK, user)
+}
+
+// GetNotifications godoc
+// @Summary Get all notifications for current user
+// @Tags notifications
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Notification
+// @Router /api/notifications [get]
+func (h *UserHandler) GetNotifications(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+
+	notifs, err := h.notificationRepo.FindByUserID(userID)
+	if err != nil {
+		return utils.InternalServerError(c, "Failed to get notifications")
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, notifs)
+}
+
+// MarkNotificationRead godoc
+// @Summary Mark a notification as read
+// @Tags notifications
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Notification ID"
+// @Success 200 {object} map[string]interface{}
+// @Router /api/notifications/{id}/read [put]
+func (h *UserHandler) MarkNotificationRead(c echo.Context) error {
+	id := c.Param("id")
+
+	err := h.notificationRepo.MarkAsRead(id)
+	if err != nil {
+		return utils.InternalServerError(c, "Failed to mark notification as read")
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, map[string]interface{}{"success": true})
+}
+
+// MarkAllNotificationsRead godoc
+// @Summary Mark all notifications as read for current user
+// @Tags notifications
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Router /api/notifications/mark-all-read [put]
+func (h *UserHandler) MarkAllNotificationsRead(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+
+	err := h.notificationRepo.MarkAllAsRead(userID)
+	if err != nil {
+		return utils.InternalServerError(c, "Failed to mark all notifications as read")
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, map[string]interface{}{"success": true})
+}
+
+// GetUnreadNotificationsCount godoc
+// @Summary Get unread notifications count for current user
+// @Tags notifications
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Router /api/notifications/unread-count [get]
+func (h *UserHandler) GetUnreadNotificationsCount(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+
+	count, err := h.notificationRepo.GetUnreadCount(userID)
+	if err != nil {
+		return utils.InternalServerError(c, "Failed to get unread notifications count")
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, map[string]interface{}{"count": count})
 }

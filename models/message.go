@@ -31,17 +31,19 @@ type SendMessageRequest struct {
 type WSMessageType string
 
 const (
-	WSMessageTypeChat                WSMessageType = "chat"
-	WSMessageTypeTyping              WSMessageType = "typing"
-	WSMessageTypeRead                WSMessageType = "read"
-	WSMessageTypeError               WSMessageType = "error"
-	WSMessageTypeConnected           WSMessageType = "connected"
-	WSMessageTypeFoodPost            WSMessageType = "food_post"
-	WSMessageTypeHungerBroadcast     WSMessageType = "hunger_broadcast"
-	WSMessageTypeRequestCreated      WSMessageType = "request_created"
-	WSMessageTypeRequestUpdated      WSMessageType = "request_updated"
-	WSMessageTypeConversationStarted WSMessageType = "conversation_started"
-	WSMessageTypePriceOffer          WSMessageType = "price_offer"
+	WSMessageTypeChat                   WSMessageType = "chat"
+	WSMessageTypeTyping                 WSMessageType = "typing"
+	WSMessageTypeRead                   WSMessageType = "read"
+	WSMessageTypeError                  WSMessageType = "error"
+	WSMessageTypeConnected              WSMessageType = "connected"
+	WSMessageTypeFoodPost               WSMessageType = "food_post"
+	WSMessageTypeHungerBroadcast        WSMessageType = "hunger_broadcast"
+	WSMessageTypeRequestCreated         WSMessageType = "request_created"
+	WSMessageTypeRequestUpdated         WSMessageType = "request_updated"
+	WSMessageTypeConversationStarted    WSMessageType = "conversation_started"
+	WSMessageTypePriceOffer             WSMessageType = "price_offer"
+	WSMessageTypeNotification           WSMessageType = "notification"
+	WSMessageTypeHungerBroadcastExpired WSMessageType = "hunger_broadcast_expired"
 )
 
 type WSMessage struct {
@@ -53,6 +55,7 @@ type WSMessage struct {
 	FoodPost        *FoodFeedItem          `json:"foodPost,omitempty"`
 	HungerBroadcast *HungerFeedItem        `json:"hungerBroadcast,omitempty"`
 	FoodRequest     *FoodRequest           `json:"foodRequest,omitempty"`
+	Notification    *Notification          `json:"notification,omitempty"`
 	Metadata        map[string]interface{} `json:"metadata,omitempty"`
 	Timestamp       time.Time              `json:"timestamp"`
 }

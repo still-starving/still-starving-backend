@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"strconv"
@@ -408,6 +409,43 @@ func (h *FoodPostHandler) AcceptRequest(c echo.Context) error {
 		// log.Printf("Failed to create conversation: %v", err)
 	}
 
+	// Update food post status to "claimed"
+	log.Printf("Attempting to update post %s status to 'claimed' for user %s", postID, userID)
+	updateReq := &models.UpdateFoodPostRequest{
+		Status: "claimed",
+	}
+	updatedPost, err := h.foodPostService.UpdatePost(postID, userID, updateReq)
+	if err != nil {
+		log.Printf("ERROR: Failed to update food post status: %v", err)
+		// Don't fail the request - status update is not critical
+	} else {
+		log.Printf("SUCCESS: Food post %s status updated to '%s'", postID, updatedPost.Status)
+	}
+
+	// Auto-reject other pending requests for this post
+	allRequests, err := h.requestRepo.FindByPostID(postID)
+	if err == nil {
+		for _, req := range allRequests {
+			if req.ID != requestID && req.Status == "pending" {
+				// Update status to rejected
+				if err := h.requestRepo.UpdateStatus(req.ID, "rejected"); err != nil {
+					log.Printf("Failed to auto-reject request %s: %v", req.ID, err)
+					continue
+				}
+
+				// Notify the rejected user
+				wsMsg := models.WSMessage{
+					Type:        models.WSMessageTypeRequestUpdated,
+					FoodRequest: &req,
+					Timestamp:   time.Now(),
+				}
+				if msgBytes, err := json.Marshal(wsMsg); err == nil {
+					h.hub.BroadcastToUsers([]string{req.UserID}, msgBytes)
+				}
+			}
+		}
+	}
+
 	// Fetch requester info to populate notification
 	requester, err := h.userRepo.FindByID(request.UserID)
 	if err == nil {
@@ -415,6 +453,7 @@ func (h *FoodPostHandler) AcceptRequest(c echo.Context) error {
 	}
 
 	// Notify the requester
+	log.Printf("Broadcasting request_updated (accepted) to user: %s", request.UserID)
 	wsMsg := models.WSMessage{
 		Type:           models.WSMessageTypeRequestUpdated,
 		FoodRequest:    request,         // Request now has UserName populated
@@ -424,6 +463,8 @@ func (h *FoodPostHandler) AcceptRequest(c echo.Context) error {
 
 	if msgBytes, err := json.Marshal(wsMsg); err == nil {
 		h.hub.BroadcastToUsers([]string{request.UserID}, msgBytes)
+	} else {
+		log.Printf("Failed to marshal WS message: %v", err)
 	}
 
 	return utils.SuccessResponse(c, http.StatusOK, map[string]interface{}{
@@ -473,6 +514,7 @@ func (h *FoodPostHandler) RejectRequest(c echo.Context) error {
 	}
 
 	// Notify the requester
+	log.Printf("Broadcasting request_updated (rejected) to user: %s", request.UserID)
 	wsMsg := models.WSMessage{
 		Type:        models.WSMessageTypeRequestUpdated,
 		FoodRequest: request,
@@ -481,6 +523,8 @@ func (h *FoodPostHandler) RejectRequest(c echo.Context) error {
 
 	if msgBytes, err := json.Marshal(wsMsg); err == nil {
 		h.hub.BroadcastToUsers([]string{request.UserID}, msgBytes)
+	} else {
+		log.Printf("Failed to marshal WS message: %v", err)
 	}
 
 	return utils.SuccessResponse(c, http.StatusOK, request)

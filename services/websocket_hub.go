@@ -107,14 +107,18 @@ func (h *Hub) Run() {
 			h.mu.RLock()
 			for _, userID := range message.UserIDs {
 				if client, ok := h.Clients[userID]; ok {
+					log.Printf("Debug: Sending message to user %s", userID)
 					select {
 					case client.Send <- message.Message:
+						log.Printf("Debug: Message sent to user %s", userID)
 					default:
 						// If send fails, it's likely a dead connection.
 						// We don't close it here because Unregister or ReadPump will handle it.
 						// Closing here while Hub is running could cause confusion.
 						log.Printf("Warning: Failed to send message to user %s (channel full)", userID)
 					}
+				} else {
+					log.Printf("Debug: User %s not found in connected clients", userID)
 				}
 			}
 			h.mu.RUnlock()

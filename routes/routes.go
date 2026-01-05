@@ -97,6 +97,9 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 
 	// User routes (all require authentication)
 	api.GET("/my-requests", userHandler.GetMyRequests, middleware.AuthMiddleware(cfg.JWT.Secret))
+	api.GET("/my-requests/unviewed-count", userHandler.GetMyRequestsUnviewedCount, middleware.AuthMiddleware(cfg.JWT.Secret))
+	api.PUT("/my-requests/mark-viewed", userHandler.MarkMyRequestsAsViewed, middleware.AuthMiddleware(cfg.JWT.Secret))
+	api.GET("/my-food-requests/pending-count", userHandler.GetPendingRequestsCount, middleware.AuthMiddleware(cfg.JWT.Secret))
 	api.GET("/my-posts", userHandler.GetMyPosts, middleware.AuthMiddleware(cfg.JWT.Secret))
 	api.GET("/my-hunger-broadcasts", userHandler.GetMyHungerBroadcasts, middleware.AuthMiddleware(cfg.JWT.Secret))
 	api.GET("/profile", userHandler.GetProfile, middleware.AuthMiddleware(cfg.JWT.Secret))

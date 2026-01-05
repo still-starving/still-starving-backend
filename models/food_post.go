@@ -5,18 +5,19 @@ import (
 )
 
 type FoodPost struct {
-	ID          string    `json:"id" db:"id"`
-	UserID      string    `json:"ownerId" db:"user_id"`
-	Title       string    `json:"title" db:"title" validate:"required,max=255"`
-	Description string    `json:"description" db:"description" validate:"required,max=500"`
-	Quantity    string    `json:"quantity" db:"quantity" validate:"required,max=100"`
-	Location    string    `json:"location" db:"location" validate:"required,max=255"`
-	ExpiryDate  time.Time `json:"expiryDate" db:"expiry_date" validate:"required"`
-	ImageURLs   []string  `json:"imageUrls,omitempty"`
-	Status      string    `json:"status" db:"status"`
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
-	UserName    string    `json:"userName,omitempty" db:"user_name"`
+	ID           string    `json:"id" db:"id"`
+	UserID       string    `json:"ownerId" db:"user_id"`
+	Title        string    `json:"title" db:"title" validate:"required,max=255"`
+	Description  string    `json:"description" db:"description" validate:"required,max=500"`
+	Quantity     string    `json:"quantity" db:"quantity" validate:"required,max=100"`
+	Location     string    `json:"location" db:"location" validate:"required,max=255"`
+	ExpiryDate   time.Time `json:"expiryDate" db:"expiry_date" validate:"required"`
+	ImageURLs    []string  `json:"imageUrls,omitempty"`
+	Status       string    `json:"status" db:"status"`
+	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt    time.Time `json:"updatedAt" db:"updated_at"`
+	UserName     string    `json:"userName,omitempty" db:"user_name"`
+	RequestCount int       `json:"requestCount" db:"-"` // Not from DB, populated in handler
 }
 
 type CreateFoodPostRequest struct {

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -43,10 +44,71 @@ func (h *UserHandler) GetMyRequests(c echo.Context) error {
 
 	requests, err := h.foodRequestRepo.FindByUserID(userID)
 	if err != nil {
+		log.Printf("ERROR in GetMyRequests: %v", err)
 		return utils.InternalServerError(c, "Failed to get requests")
 	}
 
 	return utils.SuccessResponse(c, http.StatusOK, requests)
+}
+
+// GetPendingRequestsCount godoc
+// @Summary Get count of pending requests for current user's posts
+// @Tags user
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Router /api/my-food-requests/pending-count [get]
+func (h *UserHandler) GetPendingRequestsCount(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+
+	count, err := h.foodRequestRepo.CountPendingByOwnerID(userID)
+	if err != nil {
+		return utils.InternalServerError(c, "Failed to get pending requests count")
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, map[string]interface{}{
+		"count": count,
+	})
+}
+
+// GetMyRequestsUnviewedCount godoc
+// @Summary Get count of unviewed request updates for current user
+// @Tags user
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Router /api/my-requests/unviewed-count [get]
+func (h *UserHandler) GetMyRequestsUnviewedCount(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+
+	count, err := h.foodRequestRepo.CountUnviewedByUserID(userID)
+	if err != nil {
+		return utils.InternalServerError(c, "Failed to get unviewed count")
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, map[string]interface{}{
+		"count": count,
+	})
+}
+
+// MarkMyRequestsAsViewed godoc
+// @Summary Mark all user's requests as viewed
+// @Tags user
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Router /api/my-requests/mark-viewed [put]
+func (h *UserHandler) MarkMyRequestsAsViewed(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+
+	err := h.foodRequestRepo.MarkAsViewedByUserID(userID)
+	if err != nil {
+		return utils.InternalServerError(c, "Failed to mark requests as viewed")
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, map[string]interface{}{
+		"success": true,
+	})
 }
 
 // GetMyPosts godoc
@@ -67,6 +129,23 @@ func (h *UserHandler) GetMyPosts(c echo.Context) error {
 	hungerBroadcasts, err := h.hungerBroadcastService.GetUserBroadcasts(userID)
 	if err != nil {
 		return utils.InternalServerError(c, "Failed to get hunger broadcasts")
+	}
+
+	// Get pending request counts for all food posts
+	postIDs := make([]string, len(foodPosts))
+	for i, post := range foodPosts {
+		postIDs[i] = post.ID
+	}
+
+	requestCounts, err := h.foodRequestRepo.GetPendingCountsByPostIDs(postIDs)
+	if err != nil {
+		// Log error but don't fail - just set counts to 0
+		requestCounts = make(map[string]int)
+	}
+
+	// Populate request counts
+	for i := range foodPosts {
+		foodPosts[i].RequestCount = requestCounts[foodPosts[i].ID]
 	}
 
 	response := map[string]interface{}{

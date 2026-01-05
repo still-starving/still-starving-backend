@@ -5,14 +5,15 @@ import (
 )
 
 type FoodRequest struct {
-	ID         string    `json:"id" db:"id"`
-	FoodPostID string    `json:"postId" db:"food_post_id"`
-	UserID     string    `json:"userId" db:"user_id"`
-	Message    string    `json:"message,omitempty" db:"message"`
-	Status     string    `json:"status" db:"status"`
-	CreatedAt  time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt  time.Time `json:"updatedAt" db:"updated_at"`
-	UserName   string    `json:"userName,omitempty" db:"user_name"`
+	ID         string     `json:"id" db:"id"`
+	FoodPostID string     `json:"postId" db:"food_post_id"`
+	UserID     string     `json:"userId" db:"user_id"`
+	Message    string     `json:"message,omitempty" db:"message"`
+	Status     string     `json:"status" db:"status"`
+	CreatedAt  time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt  time.Time  `json:"updatedAt" db:"updated_at"`
+	ViewedAt   *time.Time `json:"viewedAt,omitempty" db:"viewed_at"`
+	UserName   string     `json:"userName,omitempty" db:"user_name"`
 }
 
 type CreateFoodRequestRequest struct {
@@ -21,7 +22,8 @@ type CreateFoodRequestRequest struct {
 
 type FoodRequestWithPostInfo struct {
 	FoodRequest
-	PostTitle     string `json:"postTitle" db:"post_title"`
-	PostOwnerName string `json:"postOwnerName" db:"post_owner_name"`
-	PostOwnerID   string `json:"postOwnerId" db:"post_owner_id"`
+	PostTitle      string  `json:"postTitle" db:"post_title"`
+	PostOwnerName  string  `json:"postOwnerName" db:"post_owner_name"`
+	PostOwnerID    string  `json:"postOwnerId" db:"post_owner_id"`
+	ConversationID *string `json:"conversationId,omitempty" db:"conversation_id"`
 }

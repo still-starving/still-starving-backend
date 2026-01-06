@@ -81,7 +81,8 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 	auth.GET("/me", authHandler.GetMe, middleware.AuthMiddleware(cfg.JWT.Secret))
 
 	// Feed routes (authentication required)
-	api.GET("/feed", feedHandler.GetFeed, middleware.AuthMiddleware(cfg.JWT.Secret))
+	// Feed routes (authentication optional)
+	api.GET("/feed", feedHandler.GetFeed, middleware.OptionalAuthMiddleware(cfg.JWT.Secret))
 
 	// Food post routes
 	foodPosts := api.Group("/food-posts")

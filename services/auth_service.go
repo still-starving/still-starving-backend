@@ -173,3 +173,26 @@ func (s *AuthService) GetCurrentUser(userID string) (*models.User, error) {
 
 	return user, nil
 }
+
+func (s *AuthService) UpdateUser(userID string, req *models.UpdateUserRequest) (*models.User, error) {
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find user: %w", err)
+	}
+	if user == nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	if req.Name != "" {
+		user.Name = req.Name
+	}
+	if req.PreferredRadiusKm != nil {
+		user.PreferredRadiusKm = *req.PreferredRadiusKm
+	}
+
+	if err := s.userRepo.Update(user); err != nil {
+		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return user, nil
+}

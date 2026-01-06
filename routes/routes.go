@@ -43,7 +43,7 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 	imageService := services.NewImageService(minioClient, &cfg.MinIO, cfg.Upload.MaxSize)
 	foodPostService := services.NewFoodPostService(foodPostRepo, postImageRepo, imageService)
 	hungerBroadcastService := services.NewHungerBroadcastService(hungerBroadcastRepo, hungerOfferRepo, notificationRepo, hub)
-	feedService := services.NewFeedService(foodPostRepo, hungerBroadcastRepo)
+	feedService := services.NewFeedService(foodPostRepo, hungerBroadcastRepo, userRepo)
 	conversationService := services.NewConversationService(conversationRepo, foodPostRepo, hungerBroadcastRepo)
 	messageService := services.NewMessageService(messageRepo, conversationRepo)
 

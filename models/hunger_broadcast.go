@@ -15,12 +15,16 @@ type HungerBroadcast struct {
 	CreatedAt time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
 	UserName  string    `json:"userName,omitempty" db:"user_name"`
+	Latitude  float64   `json:"latitude" db:"latitude"`
+	Longitude float64   `json:"longitude" db:"longitude"`
 }
 
 type CreateHungerBroadcastRequest struct {
-	Message  string `json:"message" validate:"required,max=140"`
-	Location string `json:"location" validate:"required,max=255"`
-	Urgency  string `json:"urgency" validate:"required,oneof=normal urgent"`
+	Message   string  `json:"message" validate:"required,max=140"`
+	Location  string  `json:"location" validate:"required,max=255"`
+	Urgency   string  `json:"urgency" validate:"required,oneof=normal urgent"`
+	Latitude  float64 `json:"latitude" validate:"required,latitude"`
+	Longitude float64 `json:"longitude" validate:"required,longitude"`
 }
 
 type HungerBroadcastWithOwnership struct {
@@ -39,4 +43,6 @@ type HungerFeedItem struct {
 	OwnerID    string    `json:"ownerId"`
 	TimePosted time.Time `json:"timePosted"`
 	IsOwner    bool      `json:"isOwner"`
+	Latitude   float64   `json:"latitude"`
+	Longitude  float64   `json:"longitude"`
 }

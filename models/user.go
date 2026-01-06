@@ -5,12 +5,13 @@ import (
 )
 
 type User struct {
-	ID           string    `json:"id" db:"id"`
-	Name         string    `json:"name" db:"name" validate:"required"`
-	Email        string    `json:"email" db:"email" validate:"required,email"`
-	PasswordHash string    `json:"-" db:"password_hash"`
-	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt    time.Time `json:"updatedAt" db:"updated_at"`
+	ID                string    `json:"id" db:"id"`
+	Name              string    `json:"name" db:"name" validate:"required"`
+	Email             string    `json:"email" db:"email" validate:"required,email"`
+	PasswordHash      string    `json:"-" db:"password_hash"`
+	CreatedAt         time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt         time.Time `json:"updatedAt" db:"updated_at"`
+	PreferredRadiusKm float64   `json:"preferredRadiusKm" db:"preferred_radius_km"`
 }
 
 type RegisterRequest struct {
@@ -33,4 +34,9 @@ type LoginResponse struct {
 
 type RefreshRequest struct {
 	RefreshToken string `json:"refreshToken" validate:"required"`
+}
+
+type UpdateUserRequest struct {
+	Name              string   `json:"name"`
+	PreferredRadiusKm *float64 `json:"preferredRadiusKm"`
 }

@@ -150,3 +150,35 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 		"message": "Logged out successfully",
 	})
 }
+
+// UpdateMe godoc
+// @Summary Update current user profile
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body models.UpdateUserRequest true "Update user request"
+// @Success 200 {object} models.User
+// @Router /api/auth/me [patch]
+func (h *AuthHandler) UpdateMe(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	if userID == "" {
+		return utils.Unauthorized(c, "Unauthorized")
+	}
+
+	var req models.UpdateUserRequest
+	if err := c.Bind(&req); err != nil {
+		return utils.BadRequest(c, "Invalid request body", nil)
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return utils.BadRequest(c, "Validation failed", utils.FormatValidationErrors(err))
+	}
+
+	user, err := h.authService.UpdateUser(userID, &req)
+	if err != nil {
+		return utils.InternalServerError(c, "Failed to update profile")
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, user)
+}

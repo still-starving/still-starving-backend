@@ -23,6 +23,8 @@ type FoodPost struct {
 	SpiceLevel   string     `json:"spiceLevel" db:"spice_level"`
 	Ingredients  string     `json:"ingredients" db:"ingredients"`
 	CookedAt     *time.Time `json:"cookedAt,omitempty" db:"cooked_at"`
+	Latitude     float64    `json:"latitude" db:"latitude"`
+	Longitude    float64    `json:"longitude" db:"longitude"`
 }
 
 type CreateFoodPostRequest struct {
@@ -36,6 +38,8 @@ type CreateFoodPostRequest struct {
 	SpiceLevel  string     `json:"spiceLevel" form:"spiceLevel" validate:"omitempty,oneof=no_spicy medium_spicy spicy very_spicy"`
 	Ingredients string     `json:"ingredients" form:"ingredients" validate:"omitempty,max=1000"`
 	CookedAt    *time.Time `json:"cookedAt" form:"cookedAt"`
+	Latitude    float64    `json:"latitude" form:"latitude" validate:"required,latitude"`
+	Longitude   float64    `json:"longitude" form:"longitude" validate:"required,longitude"`
 }
 
 type UpdateFoodPostRequest struct {
@@ -50,6 +54,8 @@ type UpdateFoodPostRequest struct {
 	SpiceLevel  string     `json:"spiceLevel" validate:"omitempty,oneof=no_spicy medium_spicy spicy very_spicy"`
 	Ingredients string     `json:"ingredients" validate:"omitempty,max=1000"`
 	CookedAt    *time.Time `json:"cookedAt" validate:"omitempty"`
+	Latitude    *float64   `json:"latitude" validate:"omitempty,latitude"`
+	Longitude   *float64   `json:"longitude" validate:"omitempty,longitude"`
 }
 
 type FoodPostWithOwnership struct {
@@ -76,4 +82,6 @@ type FoodFeedItem struct {
 	SpiceLevel  string     `json:"spiceLevel"`
 	Ingredients string     `json:"ingredients"`
 	CookedAt    *time.Time `json:"cookedAt,omitempty"`
+	Latitude    float64    `json:"latitude"`
+	Longitude   float64    `json:"longitude"`
 }

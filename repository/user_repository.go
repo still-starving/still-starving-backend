@@ -32,14 +32,14 @@ func (r *UserRepository) FindByEmail(email string) (*models.User, error) {
 	user := &models.User{}
 
 	query := `
-		SELECT id, name, email, password_hash, created_at, updated_at
+		SELECT id, name, email, password_hash, created_at, updated_at, preferred_radius_km
 		FROM users
 		WHERE email = $1
 	`
 
 	err := r.db.QueryRow(query, email).Scan(
 		&user.ID, &user.Name, &user.Email, &user.PasswordHash,
-		&user.CreatedAt, &user.UpdatedAt,
+		&user.CreatedAt, &user.UpdatedAt, &user.PreferredRadiusKm,
 	)
 
 	if err == sql.ErrNoRows {
@@ -53,14 +53,14 @@ func (r *UserRepository) FindByID(id string) (*models.User, error) {
 	user := &models.User{}
 
 	query := `
-		SELECT id, name, email, password_hash, created_at, updated_at
+		SELECT id, name, email, password_hash, created_at, updated_at, preferred_radius_km
 		FROM users
 		WHERE id = $1
 	`
 
 	err := r.db.QueryRow(query, id).Scan(
 		&user.ID, &user.Name, &user.Email, &user.PasswordHash,
-		&user.CreatedAt, &user.UpdatedAt,
+		&user.CreatedAt, &user.UpdatedAt, &user.PreferredRadiusKm,
 	)
 
 	if err == sql.ErrNoRows {
@@ -73,12 +73,12 @@ func (r *UserRepository) FindByID(id string) (*models.User, error) {
 func (r *UserRepository) Update(user *models.User) error {
 	query := `
 		UPDATE users
-		SET name = $1, email = $2, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $3
+		SET name = $1, email = $2, preferred_radius_km = $3, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $4
 		RETURNING updated_at
 	`
 
-	return r.db.QueryRow(query, user.Name, user.Email, user.ID).Scan(&user.UpdatedAt)
+	return r.db.QueryRow(query, user.Name, user.Email, user.PreferredRadiusKm, user.ID).Scan(&user.UpdatedAt)
 }
 
 func (r *UserRepository) GetStats(userID string) (map[string]int, error) {

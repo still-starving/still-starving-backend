@@ -40,6 +40,8 @@ func (s *HungerBroadcastService) CreateBroadcast(userID string, req *models.Crea
 		Location:  req.Location,
 		Urgency:   req.Urgency,
 		ExpiresAt: expiresAt,
+		Latitude:  req.Latitude,
+		Longitude: req.Longitude,
 	}
 
 	if err := s.hungerBroadcastRepo.Create(broadcast); err != nil {
@@ -50,7 +52,7 @@ func (s *HungerBroadcastService) CreateBroadcast(userID string, req *models.Crea
 }
 
 func (s *HungerBroadcastService) GetAllBroadcasts(status string, limit, offset int) ([]models.HungerBroadcast, error) {
-	return s.hungerBroadcastRepo.FindAll(status, limit, offset)
+	return s.hungerBroadcastRepo.FindAll(status, 0, 0, 0, limit, offset)
 }
 
 func (s *HungerBroadcastService) GetBroadcastByID(id string) (*models.HungerBroadcast, error) {

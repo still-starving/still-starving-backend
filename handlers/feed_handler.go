@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/yourusername/food-sharing-backend/middleware"
@@ -33,7 +34,19 @@ func (h *FeedHandler) GetFeed(c echo.Context) error {
 		feedType = "all"
 	}
 
-	feed, err := h.feedService.GetFeed(feedType, userID)
+	var lat, lng, radius float64
+	if c.QueryParam("lat") != "" {
+		lat, _ = strconv.ParseFloat(c.QueryParam("lat"), 64)
+	}
+	if c.QueryParam("lng") != "" {
+		lng, _ = strconv.ParseFloat(c.QueryParam("lng"), 64)
+	}
+	if c.QueryParam("radius") != "" {
+		radius, _ = strconv.ParseFloat(c.QueryParam("radius"), 64)
+		radius = radius * 1000 // Convert km to meters
+	}
+
+	feed, err := h.feedService.GetFeed(feedType, userID, lat, lng, radius)
 	if err != nil {
 		return utils.ErrorResponseJSON(c, http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "Failed to get feed", err.Error())
 	}

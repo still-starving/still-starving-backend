@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/yourusername/food-sharing-backend/models"
@@ -21,8 +22,8 @@ func (r *HungerBroadcastRepository) Create(broadcast *models.HungerBroadcast) er
 	broadcast.Status = "active"
 
 	query := `
-		INSERT INTO hunger_broadcasts (id, user_id, message, location, urgency, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO hunger_broadcasts (id, user_id, message, location, urgency, expires_at, latitude, longitude, location_geo)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, ST_SetSRID(ST_MakePoint($8, $7), 4326))
 		RETURNING created_at, updated_at
 	`
 
@@ -30,15 +31,17 @@ func (r *HungerBroadcastRepository) Create(broadcast *models.HungerBroadcast) er
 		query,
 		broadcast.ID, broadcast.UserID, broadcast.Message,
 		broadcast.Location, broadcast.Urgency, broadcast.ExpiresAt,
+		broadcast.Latitude, broadcast.Longitude,
 	).Scan(&broadcast.CreatedAt, &broadcast.UpdatedAt)
 }
 
-func (r *HungerBroadcastRepository) FindAll(status string, limit, offset int) ([]models.HungerBroadcast, error) {
+func (r *HungerBroadcastRepository) FindAll(status string, lat, lng, radius float64, limit, offset int) ([]models.HungerBroadcast, error) {
 	var broadcasts []models.HungerBroadcast
 
 	query := `
 		SELECT hb.id, hb.user_id, hb.message, hb.location, hb.urgency, hb.status,
-		       hb.expires_at, hb.created_at, hb.updated_at, u.name as user_name
+		       hb.expires_at, hb.created_at, hb.updated_at, u.name as user_name,
+		       COALESCE(hb.latitude, 0) as latitude, COALESCE(hb.longitude, 0) as longitude
 		FROM hunger_broadcasts hb
 		JOIN users u ON hb.user_id = u.id
 	`
@@ -46,10 +49,22 @@ func (r *HungerBroadcastRepository) FindAll(status string, limit, offset int) ([
 	args := []interface{}{}
 	argCount := 1
 
+	whereClauses := []string{}
+
 	if status != "" {
-		query += fmt.Sprintf(" WHERE hb.status = $%d", argCount)
+		whereClauses = append(whereClauses, fmt.Sprintf("hb.status = $%d", argCount))
 		args = append(args, status)
 		argCount++
+	}
+
+	if lat != 0 && lng != 0 && radius > 0 {
+		whereClauses = append(whereClauses, fmt.Sprintf("ST_DWithin(hb.location_geo, ST_SetSRID(ST_MakePoint($%d, $%d), 4326), $%d)", argCount+1, argCount, argCount+2))
+		args = append(args, lat, lng, radius)
+		argCount += 3
+	}
+
+	if len(whereClauses) > 0 {
+		query += " WHERE " + strings.Join(whereClauses, " AND ")
 	}
 
 	query += " ORDER BY hb.created_at DESC"
@@ -77,6 +92,7 @@ func (r *HungerBroadcastRepository) FindAll(status string, limit, offset int) ([
 			&broadcast.ID, &broadcast.UserID, &broadcast.Message, &broadcast.Location,
 			&broadcast.Urgency, &broadcast.Status, &broadcast.ExpiresAt,
 			&broadcast.CreatedAt, &broadcast.UpdatedAt, &broadcast.UserName,
+			&broadcast.Latitude, &broadcast.Longitude,
 		)
 		if err != nil {
 			return nil, err
@@ -92,7 +108,8 @@ func (r *HungerBroadcastRepository) FindByID(id string) (*models.HungerBroadcast
 
 	query := `
 		SELECT hb.id, hb.user_id, hb.message, hb.location, hb.urgency, hb.status,
-		       hb.expires_at, hb.created_at, hb.updated_at, u.name as user_name
+		       hb.expires_at, hb.created_at, hb.updated_at, u.name as user_name,
+		       COALESCE(hb.latitude, 0) as latitude, COALESCE(hb.longitude, 0) as longitude
 		FROM hunger_broadcasts hb
 		JOIN users u ON hb.user_id = u.id
 		WHERE hb.id = $1
@@ -102,6 +119,7 @@ func (r *HungerBroadcastRepository) FindByID(id string) (*models.HungerBroadcast
 		&broadcast.ID, &broadcast.UserID, &broadcast.Message, &broadcast.Location,
 		&broadcast.Urgency, &broadcast.Status, &broadcast.ExpiresAt,
 		&broadcast.CreatedAt, &broadcast.UpdatedAt, &broadcast.UserName,
+		&broadcast.Latitude, &broadcast.Longitude,
 	)
 
 	if err == sql.ErrNoRows {
@@ -122,7 +140,7 @@ func (r *HungerBroadcastRepository) FindByUserID(userID string) ([]models.Hunger
 
 	query := `
 		SELECT id, user_id, message, location, urgency, status,
-		       expires_at, created_at, updated_at
+		       expires_at, created_at, updated_at, COALESCE(latitude, 0) as latitude, COALESCE(longitude, 0) as longitude
 		FROM hunger_broadcasts
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -140,6 +158,7 @@ func (r *HungerBroadcastRepository) FindByUserID(userID string) ([]models.Hunger
 			&broadcast.ID, &broadcast.UserID, &broadcast.Message, &broadcast.Location,
 			&broadcast.Urgency, &broadcast.Status, &broadcast.ExpiresAt,
 			&broadcast.CreatedAt, &broadcast.UpdatedAt,
+			&broadcast.Latitude, &broadcast.Longitude,
 		)
 		if err != nil {
 			return nil, err

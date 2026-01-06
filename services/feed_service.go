@@ -8,24 +8,43 @@ import (
 type FeedService struct {
 	foodPostRepo        *repository.FoodPostRepository
 	hungerBroadcastRepo *repository.HungerBroadcastRepository
+	userRepo            *repository.UserRepository
 }
 
 func NewFeedService(
 	foodPostRepo *repository.FoodPostRepository,
 	hungerBroadcastRepo *repository.HungerBroadcastRepository,
+	userRepo *repository.UserRepository,
 ) *FeedService {
 	return &FeedService{
 		foodPostRepo:        foodPostRepo,
 		hungerBroadcastRepo: hungerBroadcastRepo,
+		userRepo:            userRepo,
 	}
 }
 
-func (s *FeedService) GetFeed(feedType, userID string) ([]interface{}, error) {
+func (s *FeedService) GetFeed(feedType, userID string, lat, lng, radius float64) ([]interface{}, error) {
+	// If radius is not specified (0) and location is provided
+	if radius <= 0 && lat != 0 && lng != 0 {
+		// Use user's preference if authenticated
+		if userID != "" {
+			user, err := s.userRepo.FindByID(userID)
+			if err == nil && user != nil {
+				radius = user.PreferredRadiusKm * 1000 // Convert km to meters
+			}
+		}
+
+		// Fallback to 1km if still not set
+		if radius <= 0 {
+			radius = 1000 // 1km default
+		}
+	}
+
 	var feed []interface{}
 
 	// Get food posts if requested
 	if feedType == "" || feedType == "all" || feedType == "food" {
-		foodPosts, err := s.foodPostRepo.FindAll("available", 20, 0)
+		foodPosts, err := s.foodPostRepo.FindAll("available", lat, lng, radius, 20, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -49,6 +68,8 @@ func (s *FeedService) GetFeed(feedType, userID string) ([]interface{}, error) {
 				SpiceLevel:  post.SpiceLevel,
 				Ingredients: post.Ingredients,
 				CookedAt:    post.CookedAt,
+				Latitude:    post.Latitude,
+				Longitude:   post.Longitude,
 			}
 			feed = append(feed, feedItem)
 		}
@@ -56,7 +77,7 @@ func (s *FeedService) GetFeed(feedType, userID string) ([]interface{}, error) {
 
 	// Get hunger broadcasts if requested
 	if feedType == "" || feedType == "all" || feedType == "hunger" {
-		broadcasts, err := s.hungerBroadcastRepo.FindAll("active", 20, 0)
+		broadcasts, err := s.hungerBroadcastRepo.FindAll("active", lat, lng, radius, 20, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -72,6 +93,8 @@ func (s *FeedService) GetFeed(feedType, userID string) ([]interface{}, error) {
 				OwnerID:    broadcast.UserID,
 				TimePosted: broadcast.CreatedAt,
 				IsOwner:    broadcast.UserID == userID,
+				Latitude:   broadcast.Latitude,
+				Longitude:  broadcast.Longitude,
 			}
 			feed = append(feed, feedItem)
 		}

@@ -35,6 +35,8 @@ func (s *FoodPostService) CreatePost(userID string, req *models.CreateFoodPostRe
 		SpiceLevel:  req.SpiceLevel,
 		Ingredients: req.Ingredients,
 		CookedAt:    req.CookedAt,
+		Latitude:    req.Latitude,
+		Longitude:   req.Longitude,
 	}
 
 	// Create post in database first
@@ -75,7 +77,7 @@ func (s *FoodPostService) CreatePost(userID string, req *models.CreateFoodPostRe
 }
 
 func (s *FoodPostService) GetAllPosts(status string, limit, offset int) ([]models.FoodPost, error) {
-	return s.foodPostRepo.FindAll(status, limit, offset)
+	return s.foodPostRepo.FindAll(status, 0, 0, 0, limit, offset)
 }
 
 func (s *FoodPostService) GetPostByID(id string) (*models.FoodPost, error) {
@@ -137,6 +139,12 @@ func (s *FoodPostService) UpdatePost(postID, userID string, req *models.UpdateFo
 	}
 	if req.CookedAt != nil {
 		post.CookedAt = req.CookedAt
+	}
+	if req.Latitude != nil {
+		post.Latitude = *req.Latitude
+	}
+	if req.Longitude != nil {
+		post.Longitude = *req.Longitude
 	}
 
 	// Update in database

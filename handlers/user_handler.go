@@ -198,11 +198,12 @@ func (h *UserHandler) GetProfile(c echo.Context) error {
 	}
 
 	response := map[string]interface{}{
-		"id":        user.ID,
-		"name":      user.Name,
-		"email":     user.Email,
-		"createdAt": user.CreatedAt,
-		"stats":     stats,
+		"id":                user.ID,
+		"name":              user.Name,
+		"email":             user.Email,
+		"createdAt":         user.CreatedAt,
+		"preferredRadiusKm": user.PreferredRadiusKm,
+		"stats":             stats,
 	}
 
 	return utils.SuccessResponse(c, http.StatusOK, response)
@@ -221,8 +222,9 @@ func (h *UserHandler) UpdateProfile(c echo.Context) error {
 	userID := middleware.GetUserID(c)
 
 	var req struct {
-		Name  string `json:"name" validate:"omitempty,min=2,max=255"`
-		Email string `json:"email" validate:"omitempty,email"`
+		Name              string   `json:"name" validate:"omitempty,min=2,max=255"`
+		Email             string   `json:"email" validate:"omitempty,email"`
+		PreferredRadiusKm *float64 `json:"preferredRadiusKm"`
 	}
 
 	if err := c.Bind(&req); err != nil {
@@ -243,6 +245,9 @@ func (h *UserHandler) UpdateProfile(c echo.Context) error {
 	}
 	if req.Email != "" {
 		user.Email = req.Email
+	}
+	if req.PreferredRadiusKm != nil {
+		user.PreferredRadiusKm = *req.PreferredRadiusKm
 	}
 
 	if err := h.userRepo.Update(user); err != nil {

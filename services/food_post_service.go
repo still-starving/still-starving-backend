@@ -32,6 +32,9 @@ func (s *FoodPostService) CreatePost(userID string, req *models.CreateFoodPostRe
 		ExpiryDate:  req.ExpiryDate,
 		Price:       req.Price,
 		Currency:    req.Currency,
+		SpiceLevel:  req.SpiceLevel,
+		Ingredients: req.Ingredients,
+		CookedAt:    req.CookedAt,
 	}
 
 	// Create post in database first
@@ -125,6 +128,15 @@ func (s *FoodPostService) UpdatePost(postID, userID string, req *models.UpdateFo
 	}
 	if req.Currency != "" {
 		post.Currency = req.Currency
+	}
+	if req.SpiceLevel != "" {
+		post.SpiceLevel = req.SpiceLevel
+	}
+	if req.Ingredients != "" {
+		post.Ingredients = req.Ingredients
+	}
+	if req.CookedAt != nil {
+		post.CookedAt = req.CookedAt
 	}
 
 	// Update in database

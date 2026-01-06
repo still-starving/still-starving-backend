@@ -35,7 +35,7 @@ func (h *FeedHandler) GetFeed(c echo.Context) error {
 
 	feed, err := h.feedService.GetFeed(feedType, userID)
 	if err != nil {
-		return utils.InternalServerError(c, "Failed to get feed")
+		return utils.ErrorResponseJSON(c, http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "Failed to get feed", err.Error())
 	}
 
 	return utils.SuccessResponse(c, http.StatusOK, feed)

@@ -86,6 +86,9 @@ func (h *FoodPostHandler) CreateFoodPost(c echo.Context) error {
 		ImageURLs:   post.ImageURLs,
 		Price:       post.Price,
 		Currency:    post.Currency,
+		SpiceLevel:  post.SpiceLevel,
+		Ingredients: post.Ingredients,
+		CookedAt:    post.CookedAt,
 		IsOwner:     false, // For broadcast, receiver is not owner
 	}
 

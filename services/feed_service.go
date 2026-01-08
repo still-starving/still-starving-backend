@@ -34,9 +34,10 @@ func (s *FeedService) GetFeed(feedType, userID string, lat, lng, radius float64)
 			}
 		}
 
-		// Fallback to 1km if still not set
-		if radius <= 0 {
-			radius = 1000 // 1km default
+		// Fallback to 5km if still not set or if preference is exceptionally small (less than 1km)
+		// This provides a better out-of-the-box experience
+		if radius < 1000 {
+			radius = 5000 // 5km default
 		}
 	}
 

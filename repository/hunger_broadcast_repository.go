@@ -58,8 +58,10 @@ func (r *HungerBroadcastRepository) FindAll(status string, lat, lng, radius floa
 	}
 
 	if lat != 0 && lng != 0 && radius > 0 {
-		whereClauses = append(whereClauses, fmt.Sprintf("ST_DWithin(hb.location_geo, ST_SetSRID(ST_MakePoint($%d, $%d), 4326), $%d)", argCount+1, argCount, argCount+2))
-		args = append(args, lat, lng, radius)
+		// ST_MakePoint expects (longitude, latitude) order
+		// Cast to geography for meter-based distance calculations
+		whereClauses = append(whereClauses, fmt.Sprintf("ST_DWithin(hb.location_geo::geography, ST_SetSRID(ST_MakePoint($%d, $%d), 4326)::geography, $%d)", argCount, argCount+1, argCount+2))
+		args = append(args, lng, lat, radius)
 		argCount += 3
 	}
 

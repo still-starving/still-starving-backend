@@ -45,7 +45,8 @@ func (s *FeedService) GetFeed(feedType, userID string, lat, lng, radius float64)
 
 	// Get food posts if requested
 	if feedType == "" || feedType == "all" || feedType == "food" {
-		foodPosts, err := s.foodPostRepo.FindAll("available", lat, lng, radius, 20, 0)
+		// Pass empty status to get all posts (available, claimed, expired)
+		foodPosts, err := s.foodPostRepo.FindAll("", lat, lng, radius, 20, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -71,6 +72,9 @@ func (s *FeedService) GetFeed(feedType, userID string, lat, lng, radius float64)
 				CookedAt:    post.CookedAt,
 				Latitude:    post.Latitude,
 				Longitude:   post.Longitude,
+				Rating:      post.Rating,
+				Review:      post.Review,
+				ReviewedAt:  post.ReviewedAt,
 			}
 			feed = append(feed, feedItem)
 		}

@@ -5,26 +5,30 @@ import (
 )
 
 type FoodPost struct {
-	ID           string     `json:"id" db:"id"`
-	UserID       string     `json:"ownerId" db:"user_id"`
-	Title        string     `json:"title" db:"title" validate:"required,max=255"`
-	Description  string     `json:"description" db:"description" validate:"required,max=500"`
-	Quantity     string     `json:"quantity" db:"quantity" validate:"required,max=100"`
-	Location     string     `json:"location" db:"location" validate:"required,max=255"`
-	ExpiryDate   time.Time  `json:"expiryDate" db:"expiry_date" validate:"required"`
-	ImageURLs    []string   `json:"imageUrls,omitempty"`
-	Status       string     `json:"status" db:"status"`
-	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`
-	UpdatedAt    time.Time  `json:"updatedAt" db:"updated_at"`
-	UserName     string     `json:"userName,omitempty" db:"user_name"`
-	RequestCount int        `json:"requestCount" db:"-"` // Not from DB, populated in handler
-	Price        *float64   `json:"price,omitempty" db:"price"`
-	Currency     string     `json:"currency,omitempty" db:"currency"`
-	SpiceLevel   string     `json:"spiceLevel" db:"spice_level"`
-	Ingredients  string     `json:"ingredients" db:"ingredients"`
-	CookedAt     *time.Time `json:"cookedAt,omitempty" db:"cooked_at"`
-	Latitude     float64    `json:"latitude" db:"latitude"`
-	Longitude    float64    `json:"longitude" db:"longitude"`
+	ID              string     `json:"id" db:"id"`
+	UserID          string     `json:"ownerId" db:"user_id"`
+	Title           string     `json:"title" db:"title" validate:"required,max=255"`
+	Description     string     `json:"description" db:"description" validate:"required,max=500"`
+	Quantity        string     `json:"quantity" db:"quantity" validate:"required,max=100"`
+	Location        string     `json:"location" db:"location" validate:"required,max=255"`
+	ExpiryDate      time.Time  `json:"expiryDate" db:"expiry_date" validate:"required"`
+	ImageURLs       []string   `json:"imageUrls,omitempty"`
+	Status          string     `json:"status" db:"status"`
+	CreatedAt       time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt       time.Time  `json:"updatedAt" db:"updated_at"`
+	UserName        string     `json:"userName,omitempty" db:"user_name"`
+	RequestCount    int        `json:"requestCount" db:"-"` // Not from DB, populated in handler
+	Price           *float64   `json:"price,omitempty" db:"price"`
+	Currency        string     `json:"currency,omitempty" db:"currency"`
+	SpiceLevel      string     `json:"spiceLevel" db:"spice_level"`
+	Ingredients     string     `json:"ingredients" db:"ingredients"`
+	CookedAt        *time.Time `json:"cookedAt,omitempty" db:"cooked_at"`
+	Latitude        float64    `json:"latitude" db:"latitude"`
+	Longitude       float64    `json:"longitude" db:"longitude"`
+	ClaimedByUserID *string    `json:"claimedByUserId" db:"claimed_by_user_id"`
+	Rating          *int       `json:"rating" db:"rating"`
+	Review          *string    `json:"review" db:"review"`
+	ReviewedAt      *time.Time `json:"reviewedAt" db:"reviewed_at"`
 }
 
 type CreateFoodPostRequest struct {
@@ -63,6 +67,11 @@ type FoodPostWithOwnership struct {
 	IsOwner bool `json:"isOwner"`
 }
 
+type FoodPostFeedbackRequest struct {
+	Rating int    `json:"rating" validate:"required,min=1,max=5"`
+	Review string `json:"review" validate:"required,max=500"`
+}
+
 // For feed response
 type FoodFeedItem struct {
 	Type        string     `json:"type"`
@@ -84,4 +93,7 @@ type FoodFeedItem struct {
 	CookedAt    *time.Time `json:"cookedAt,omitempty"`
 	Latitude    float64    `json:"latitude"`
 	Longitude   float64    `json:"longitude"`
+	Rating      *int       `json:"rating"`
+	Review      *string    `json:"review"`
+	ReviewedAt  *time.Time `json:"reviewedAt"`
 }

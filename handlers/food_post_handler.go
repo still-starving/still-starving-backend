@@ -6,6 +6,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -424,6 +425,11 @@ func (h *FoodPostHandler) AcceptRequest(c echo.Context) error {
 		// Don't fail the request - status update is not critical
 	} else {
 		log.Printf("SUCCESS: Food post %s status updated to '%s'", postID, updatedPost.Status)
+
+		// Also mark who claimed it for feedback system
+		if err := h.foodPostService.MarkAsClaimed(postID, request.UserID); err != nil {
+			log.Printf("ERROR: Failed to mark post as claimed by user %s: %v", request.UserID, err)
+		}
 	}
 
 	// Auto-reject other pending requests for this post
@@ -532,4 +538,42 @@ func (h *FoodPostHandler) RejectRequest(c echo.Context) error {
 	}
 
 	return utils.SuccessResponse(c, http.StatusOK, request)
+}
+
+// SubmitFeedback godoc
+// @Summary Submit feedback for a food post
+// @Tags food-posts
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Post ID"
+// @Param request body models.FoodPostFeedbackRequest true "Feedback body"
+// @Success 200 {object} map[string]string
+// @Router /api/food-posts/{id}/feedback [post]
+func (h *FoodPostHandler) SubmitFeedback(c echo.Context) error {
+	userID := middleware.GetUserID(c)
+	postID := c.Param("id")
+
+	var req models.FoodPostFeedbackRequest
+	if err := c.Bind(&req); err != nil {
+		return utils.BadRequest(c, "Invalid request body", nil)
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return utils.BadRequest(c, "Validation failed", utils.FormatValidationErrors(err))
+	}
+
+	if err := h.foodPostService.SubmitFeedback(postID, userID, &req); err != nil {
+		if strings.Contains(err.Error(), "unauthorized") {
+			return utils.Forbidden(c, err.Error())
+		}
+		if strings.Contains(err.Error(), "already been submitted") {
+			return utils.Conflict(c, err.Error())
+		}
+		return utils.InternalServerError(c, "Failed to submit feedback")
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, map[string]string{
+		"message": "Feedback submitted successfully. Thank you!",
+	})
 }

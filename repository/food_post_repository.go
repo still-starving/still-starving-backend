@@ -47,6 +47,7 @@ func (r *FoodPostRepository) FindAll(status string, lat, lng, radius float64, li
 		       COALESCE(fp.spice_level, 'no_spicy') as spice_level, 
 		       COALESCE(fp.ingredients, '') as ingredients,
 		       fp.cooked_at, COALESCE(fp.latitude, 0) as latitude, COALESCE(fp.longitude, 0) as longitude,
+		       fp.claimed_by_user_id, fp.rating, fp.review, fp.reviewed_at,
 		       COALESCE(array_agg(pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL), '{}') as image_urls
 		FROM food_posts fp
 		JOIN users u ON fp.user_id = u.id
@@ -124,6 +125,7 @@ func (r *FoodPostRepository) FindAll(status string, lat, lng, radius float64, li
 			&post.Status, &post.CreatedAt, &post.UpdatedAt, &post.UserName,
 			&post.Price, &post.Currency, &post.SpiceLevel, &post.Ingredients,
 			&post.CookedAt, &post.Latitude, &post.Longitude,
+			&post.ClaimedByUserID, &post.Rating, &post.Review, &post.ReviewedAt,
 			&imageURLs,
 		)
 		if err != nil {
@@ -146,6 +148,7 @@ func (r *FoodPostRepository) FindByID(id string) (*models.FoodPost, error) {
 		       COALESCE(fp.spice_level, 'no_spicy') as spice_level, 
 		       COALESCE(fp.ingredients, '') as ingredients,
 		       fp.cooked_at, COALESCE(fp.latitude, 0) as latitude, COALESCE(fp.longitude, 0) as longitude,
+		       fp.claimed_by_user_id, fp.rating, fp.review, fp.reviewed_at,
 		       COALESCE(array_agg(pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL), '{}') as image_urls
 		FROM food_posts fp
 		JOIN users u ON fp.user_id = u.id
@@ -161,6 +164,7 @@ func (r *FoodPostRepository) FindByID(id string) (*models.FoodPost, error) {
 		&post.Status, &post.CreatedAt, &post.UpdatedAt, &post.UserName,
 		&post.Price, &post.Currency, &post.SpiceLevel, &post.Ingredients,
 		&post.CookedAt, &post.Latitude, &post.Longitude,
+		&post.ClaimedByUserID, &post.Rating, &post.Review, &post.ReviewedAt,
 		&imageURLs,
 	)
 
@@ -173,6 +177,41 @@ func (r *FoodPostRepository) FindByID(id string) (*models.FoodPost, error) {
 
 	post.ImageURLs = []string(imageURLs)
 	return post, nil
+}
+
+func (r *FoodPostRepository) UpdateStatus(id, status string) error {
+	query := `
+		UPDATE food_posts
+		SET status = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`
+	_, err := r.db.Exec(query, status, id)
+	return err
+}
+
+func (r *FoodPostRepository) FindExpiredAvailablePosts() ([]models.FoodPost, error) {
+	query := `
+		SELECT id, user_id, title
+		FROM food_posts
+		WHERE status = 'available' AND expiry_date < CURRENT_TIMESTAMP
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []models.FoodPost
+	for rows.Next() {
+		var post models.FoodPost
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Title); err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+
+	return posts, nil
 }
 
 func (r *FoodPostRepository) Update(post *models.FoodPost) error {
@@ -211,6 +250,7 @@ func (r *FoodPostRepository) FindByUserID(userID string) ([]models.FoodPost, err
 		       COALESCE(fp.spice_level, 'no_spicy') as spice_level, 
 		       COALESCE(fp.ingredients, '') as ingredients,
 		       fp.cooked_at, COALESCE(fp.latitude, 0) as latitude, COALESCE(fp.longitude, 0) as longitude,
+		       fp.claimed_by_user_id, fp.rating, fp.review, fp.reviewed_at,
 		       COALESCE(array_agg(pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL), '{}') as image_urls
 		FROM food_posts fp
 		LEFT JOIN post_images pi ON fp.id = pi.food_post_id
@@ -234,6 +274,7 @@ func (r *FoodPostRepository) FindByUserID(userID string) ([]models.FoodPost, err
 			&post.Status, &post.CreatedAt, &post.UpdatedAt,
 			&post.Price, &post.Currency, &post.SpiceLevel, &post.Ingredients,
 			&post.CookedAt, &post.Latitude, &post.Longitude,
+			&post.ClaimedByUserID, &post.Rating, &post.Review, &post.ReviewedAt,
 			&imageURLs,
 		)
 		if err != nil {
@@ -244,4 +285,15 @@ func (r *FoodPostRepository) FindByUserID(userID string) ([]models.FoodPost, err
 	}
 
 	return posts, nil
+}
+func (r *FoodPostRepository) UpdateClaimedInfo(id string, userID string) error {
+	query := `UPDATE food_posts SET claimed_by_user_id = $1 WHERE id = $2`
+	_, err := r.db.Exec(query, userID, id)
+	return err
+}
+
+func (r *FoodPostRepository) UpdateFeedback(id string, rating int, review string) error {
+	query := `UPDATE food_posts SET rating = $1, review = $2, reviewed_at = CURRENT_TIMESTAMP WHERE id = $3`
+	_, err := r.db.Exec(query, rating, review, id)
+	return err
 }

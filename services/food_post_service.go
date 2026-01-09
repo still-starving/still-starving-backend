@@ -224,3 +224,48 @@ func (s *FoodPostService) AddImages(postID, userID string, imageFiles []*multipa
 
 	return post, nil
 }
+
+func (s *FoodPostService) MarkAsClaimed(postID, userID string) error {
+	return s.foodPostRepo.UpdateClaimedInfo(postID, userID)
+}
+
+func (s *FoodPostService) SubmitFeedback(postID, userID string, req *models.FoodPostFeedbackRequest) error {
+	// Get post to verify claim
+	post, err := s.foodPostRepo.FindByID(postID)
+	if err != nil {
+		return err
+	}
+	if post == nil {
+		return fmt.Errorf("post not found")
+	}
+
+	// Verify user is the one who claimed the post
+	if post.ClaimedByUserID == nil || *post.ClaimedByUserID != userID {
+		return fmt.Errorf("unauthorized: only the person who claimed this food can leave feedback")
+	}
+
+	// Verify if feedback was already given
+	if post.Rating != nil {
+		return fmt.Errorf("feedback has already been submitted for this post")
+	}
+
+	return s.foodPostRepo.UpdateFeedback(postID, req.Rating, req.Review)
+}
+
+func (s *FoodPostService) AutoCloseExpiredPosts() error {
+	expiredPosts, err := s.foodPostRepo.FindExpiredAvailablePosts()
+	if err != nil {
+		return err
+	}
+
+	for _, post := range expiredPosts {
+		// Update status to expired
+		if err := s.foodPostRepo.UpdateStatus(post.ID, "expired"); err != nil {
+			fmt.Printf("Failed to expire post %s: %v\n", post.ID, err)
+			continue
+		}
+		// TODO: Option to notify user via WebSocket that their post has expired
+	}
+
+	return nil
+}

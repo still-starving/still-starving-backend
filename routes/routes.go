@@ -53,6 +53,7 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 		defer ticker.Stop()
 		for range ticker.C {
 			hungerBroadcastService.AutoCloseExpiredBroadcasts()
+			foodPostService.AutoCloseExpiredPosts()
 		}
 	}()
 
@@ -95,6 +96,7 @@ func SetupRoutes(e *echo.Echo, db *sql.DB, redisClient *redis.Client, minioClien
 	foodPosts.GET("/:id/requests", foodPostHandler.GetFoodRequests, middleware.AuthMiddleware(cfg.JWT.Secret))
 	foodPosts.PUT("/:postId/requests/:requestId/accept", foodPostHandler.AcceptRequest, middleware.AuthMiddleware(cfg.JWT.Secret))
 	foodPosts.PUT("/:postId/requests/:requestId/reject", foodPostHandler.RejectRequest, middleware.AuthMiddleware(cfg.JWT.Secret))
+	foodPosts.POST("/:id/feedback", foodPostHandler.SubmitFeedback, middleware.AuthMiddleware(cfg.JWT.Secret))
 
 	// Hunger broadcast routes
 	hungerBroadcasts := api.Group("/hunger-broadcasts")

@@ -23,8 +23,8 @@ func (r *FoodPostRepository) Create(post *models.FoodPost) error {
 	post.Status = "available"
 
 	query := `
-		INSERT INTO food_posts (id, user_id, title, description, quantity, location, expiry_date, price, currency, spice_level, ingredients, cooked_at, latitude, longitude, location_geo)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, ST_SetSRID(ST_MakePoint($14, $13), 4326))
+		INSERT INTO food_posts (id, user_id, title, description, quantity, location, expiry_date, price, currency, spice_level, ingredients, cooked_at, latitude, longitude, packaging, location_geo)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, ST_SetSRID(ST_MakePoint($14, $13), 4326))
 		RETURNING created_at, updated_at
 	`
 
@@ -33,7 +33,7 @@ func (r *FoodPostRepository) Create(post *models.FoodPost) error {
 		post.ID, post.UserID, post.Title, post.Description,
 		post.Quantity, post.Location, post.ExpiryDate,
 		post.Price, post.Currency, post.SpiceLevel, post.Ingredients, post.CookedAt,
-		post.Latitude, post.Longitude,
+		post.Latitude, post.Longitude, post.Packaging,
 	).Scan(&post.CreatedAt, &post.UpdatedAt)
 }
 
@@ -47,7 +47,7 @@ func (r *FoodPostRepository) FindAll(status string, lat, lng, radius float64, li
 		       COALESCE(fp.spice_level, 'no_spicy') as spice_level, 
 		       COALESCE(fp.ingredients, '') as ingredients,
 		       fp.cooked_at, COALESCE(fp.latitude, 0) as latitude, COALESCE(fp.longitude, 0) as longitude,
-		       fp.claimed_by_user_id, fp.rating, fp.review, fp.reviewed_at,
+		       fp.claimed_by_user_id, fp.rating, fp.review, fp.reviewed_at, COALESCE(fp.packaging, 'container_provided') as packaging,
 		       COALESCE(array_agg(pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL), '{}') as image_urls
 		FROM food_posts fp
 		JOIN users u ON fp.user_id = u.id
@@ -125,7 +125,7 @@ func (r *FoodPostRepository) FindAll(status string, lat, lng, radius float64, li
 			&post.Status, &post.CreatedAt, &post.UpdatedAt, &post.UserName,
 			&post.Price, &post.Currency, &post.SpiceLevel, &post.Ingredients,
 			&post.CookedAt, &post.Latitude, &post.Longitude,
-			&post.ClaimedByUserID, &post.Rating, &post.Review, &post.ReviewedAt,
+			&post.ClaimedByUserID, &post.Rating, &post.Review, &post.ReviewedAt, &post.Packaging,
 			&imageURLs,
 		)
 		if err != nil {
@@ -148,7 +148,7 @@ func (r *FoodPostRepository) FindByID(id string) (*models.FoodPost, error) {
 		       COALESCE(fp.spice_level, 'no_spicy') as spice_level, 
 		       COALESCE(fp.ingredients, '') as ingredients,
 		       fp.cooked_at, COALESCE(fp.latitude, 0) as latitude, COALESCE(fp.longitude, 0) as longitude,
-		       fp.claimed_by_user_id, fp.rating, fp.review, fp.reviewed_at,
+		       fp.claimed_by_user_id, fp.rating, fp.review, fp.reviewed_at, COALESCE(fp.packaging, 'container_provided') as packaging,
 		       COALESCE(array_agg(pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL), '{}') as image_urls
 		FROM food_posts fp
 		JOIN users u ON fp.user_id = u.id
@@ -164,7 +164,7 @@ func (r *FoodPostRepository) FindByID(id string) (*models.FoodPost, error) {
 		&post.Status, &post.CreatedAt, &post.UpdatedAt, &post.UserName,
 		&post.Price, &post.Currency, &post.SpiceLevel, &post.Ingredients,
 		&post.CookedAt, &post.Latitude, &post.Longitude,
-		&post.ClaimedByUserID, &post.Rating, &post.Review, &post.ReviewedAt,
+		&post.ClaimedByUserID, &post.Rating, &post.Review, &post.ReviewedAt, &post.Packaging,
 		&imageURLs,
 	)
 
@@ -220,9 +220,9 @@ func (r *FoodPostRepository) Update(post *models.FoodPost) error {
 		SET title = $1, description = $2, quantity = $3, location = $4,
 		    expiry_date = $5, status = $6, price = $7, currency = $8,
 		    spice_level = $9, ingredients = $10, cooked_at = $11, 
-		    latitude = $12, longitude = $13, location_geo = ST_SetSRID(ST_MakePoint($13, $12), 4326),
+		    latitude = $12, longitude = $13, packaging = $14, location_geo = ST_SetSRID(ST_MakePoint($13, $12), 4326),
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = $14
+		WHERE id = $15
 		RETURNING updated_at
 	`
 
@@ -231,7 +231,7 @@ func (r *FoodPostRepository) Update(post *models.FoodPost) error {
 		post.Title, post.Description, post.Quantity, post.Location,
 		post.ExpiryDate, post.Status, post.Price, post.Currency,
 		post.SpiceLevel, post.Ingredients, post.CookedAt,
-		post.Latitude, post.Longitude, post.ID,
+		post.Latitude, post.Longitude, post.Packaging, post.ID,
 	).Scan(&post.UpdatedAt)
 }
 
@@ -250,7 +250,7 @@ func (r *FoodPostRepository) FindByUserID(userID string) ([]models.FoodPost, err
 		       COALESCE(fp.spice_level, 'no_spicy') as spice_level, 
 		       COALESCE(fp.ingredients, '') as ingredients,
 		       fp.cooked_at, COALESCE(fp.latitude, 0) as latitude, COALESCE(fp.longitude, 0) as longitude,
-		       fp.claimed_by_user_id, fp.rating, fp.review, fp.reviewed_at,
+		       fp.claimed_by_user_id, fp.rating, fp.review, fp.reviewed_at, COALESCE(fp.packaging, 'container_provided') as packaging,
 		       COALESCE(array_agg(pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL), '{}') as image_urls
 		FROM food_posts fp
 		LEFT JOIN post_images pi ON fp.id = pi.food_post_id
@@ -274,7 +274,7 @@ func (r *FoodPostRepository) FindByUserID(userID string) ([]models.FoodPost, err
 			&post.Status, &post.CreatedAt, &post.UpdatedAt,
 			&post.Price, &post.Currency, &post.SpiceLevel, &post.Ingredients,
 			&post.CookedAt, &post.Latitude, &post.Longitude,
-			&post.ClaimedByUserID, &post.Rating, &post.Review, &post.ReviewedAt,
+			&post.ClaimedByUserID, &post.Rating, &post.Review, &post.ReviewedAt, &post.Packaging,
 			&imageURLs,
 		)
 		if err != nil {

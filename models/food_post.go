@@ -12,6 +12,8 @@ type FoodPost struct {
 	Quantity        string     `json:"quantity" db:"quantity" validate:"required,max=100"`
 	Location        string     `json:"location" db:"location" validate:"required,max=255"`
 	ExpiryDate      time.Time  `json:"expiryDate" db:"expiry_date" validate:"required"`
+	CoookedAt       *time.Time `json:"cookedAt,omitempty" db:"cooked_at"`
+	Packaging       string     `json:"packaging" db:"packaging"`
 	ImageURLs       []string   `json:"imageUrls,omitempty"`
 	Status          string     `json:"status" db:"status"`
 	CreatedAt       time.Time  `json:"createdAt" db:"created_at"`
@@ -39,6 +41,7 @@ type CreateFoodPostRequest struct {
 	ExpiryDate  time.Time  `json:"expiryDate" form:"expiryDate" validate:"required"`
 	Price       *float64   `json:"price" form:"price"`
 	Currency    string     `json:"currency" form:"currency"`
+	Packaging   string     `json:"packaging" form:"packaging" validate:"omitempty,oneof=container_provided bring_own_container"`
 	SpiceLevel  string     `json:"spiceLevel" form:"spiceLevel" validate:"omitempty,oneof=no_spicy medium_spicy spicy very_spicy"`
 	Ingredients string     `json:"ingredients" form:"ingredients" validate:"omitempty,max=1000"`
 	CookedAt    *time.Time `json:"cookedAt" form:"cookedAt"`
@@ -53,6 +56,7 @@ type UpdateFoodPostRequest struct {
 	Location    string     `json:"location" validate:"omitempty,max=255"`
 	ExpiryDate  time.Time  `json:"expiryDate"`
 	Status      string     `json:"status" validate:"omitempty,oneof=available claimed expired"`
+	Packaging   string     `json:"packaging" validate:"omitempty,oneof=container_provided bring_own_container"`
 	Price       *float64   `json:"price" validate:"omitempty"`
 	Currency    string     `json:"currency" validate:"omitempty,max=3"`
 	SpiceLevel  string     `json:"spiceLevel" validate:"omitempty,oneof=no_spicy medium_spicy spicy very_spicy"`
@@ -82,6 +86,7 @@ type FoodFeedItem struct {
 	Location    string     `json:"location"`
 	ExpiryDate  time.Time  `json:"expiryDate"`
 	Status      string     `json:"status"`
+	Packaging   string     `json:"packaging"`
 	OwnerName   string     `json:"ownerName"`
 	OwnerID     string     `json:"ownerId"`
 	ImageURLs   []string   `json:"imageUrls,omitempty"`

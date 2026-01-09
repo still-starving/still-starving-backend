@@ -35,6 +35,7 @@ func (s *FoodPostService) CreatePost(userID string, req *models.CreateFoodPostRe
 		SpiceLevel:  req.SpiceLevel,
 		Ingredients: req.Ingredients,
 		CookedAt:    req.CookedAt,
+		Packaging:   req.Packaging,
 		Latitude:    req.Latitude,
 		Longitude:   req.Longitude,
 	}

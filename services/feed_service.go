@@ -61,6 +61,7 @@ func (s *FeedService) GetFeed(feedType, userID string, lat, lng, radius float64)
 				Location:    post.Location,
 				ExpiryDate:  post.ExpiryDate,
 				Status:      post.Status,
+				Packaging:   post.Packaging,
 				OwnerName:   post.UserName,
 				OwnerID:     post.UserID,
 				ImageURLs:   post.ImageURLs,
